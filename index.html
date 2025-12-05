@@ -3,6 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <title>Paris Discovery – Loader</title>
+  <!-- GA dùng chung -->
+  <script src="ga-lozu.js"></script>
+  <!-- Cấu hình page view cho index -->
+  <script>
+    window.addEventListener('load', function() {
+      if (window.gtag && window.LOZU_GA_ID) {
+        gtag('config', window.LOZU_GA_ID, {
+          'page_title': 'Lozu – Index',
+          'page_path': '/index'   // bạn thích đặt /index.html cũng được
+        });
+
+        // Gửi thêm event tùy thích (không bắt buộc)
+        gtag('event', 'view_index', {
+          'mode': 'index',
+          'description': 'User opened index page'
+        });
+      }
+    });
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- favicon -->
@@ -68,5 +87,34 @@
     }
   })();
 </script>
+
+<script>
+  function selectMode(mode) {
+    // Gửi event chọn mode
+    if (window.gtag && window.LOZU_GA_ID) {
+      gtag('event', 'select_mode', {
+        'mode': mode,          // 'web' hoặc 'mobile'
+        'page_path': '/index'
+      });
+    }
+
+    // Điều hướng
+    if (mode === 'web') {
+      window.location.href = 'web.html';
+    } else {
+      window.location.href = 'mobile.html';
+    }
+  }
+
+  // Gắn vào button
+  document.getElementById('btn-web').addEventListener('click', function() {
+    selectMode('web');
+  });
+
+  document.getElementById('btn-mobile').addEventListener('click', function() {
+    selectMode('mobile');
+  });
+</script>
+
 </body>
 </html>
