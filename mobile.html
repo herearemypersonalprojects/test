@@ -1008,6 +1008,7 @@ main {
     el.addEventListener("click", (e) => {
       e.stopPropagation();
       onPoiClick(poi);          // 👈 log GA
+
       showPoiDetail(poi._idx);
     });
 
@@ -1359,48 +1360,48 @@ main {
       ? `./images/${poi.reference.toLowerCase()}.jpg`
       : "";
 
-poiDetailEl.innerHTML = `
-  <div class="poi-detail-img-wrapper">
-    <img
-      src="${imgSrc}"
-      class="poi-detail-img"
-      alt="${title}"
-      onerror="this.style.display='none';"
-    />
-  </div>
+    poiDetailEl.innerHTML = `
+      <div class="poi-detail-img-wrapper">
+        <img
+          src="${imgSrc}"
+          class="poi-detail-img"
+          alt="${title}"
+          onerror="this.style.display='none';"
+        />
+      </div>
 
-  <!-- header: title + score trên cùng một hàng -->
-  <div class="poi-detail-header">
-    <div class="poi-detail-title">${title}</div>
-    ${
-      scoreText
-        ? `<div class="poi-score">⭐ ${scoreText}/10</div>`
-        : ""
-    }
-  </div>
+    <!-- header: title + score trên cùng một hàng -->
+    <div class="poi-detail-header">
+      <div class="poi-detail-title">${title}</div>
+      ${
+        scoreText
+          ? `<div class="poi-score">⭐ ${scoreText}/10</div>`
+          : ""
+      }
+    </div>
 
-  <div class="poi-detail-address">${addr}</div>
+    <div class="poi-detail-address">${addr}</div>
 
-  <button type="button"
-    class="poi-detail-listen"
-    onclick="playPoiStory(${idx})">
-    ${t.ttsLabel}
-  </button>
+    <button type="button"
+      class="poi-detail-listen"
+      onclick="playPoiStory(${idx})">
+      ${t.ttsLabel}
+    </button>
 
-  <div class="poi-detail-story" id="poi-detail-story"></div>
-`;
+      <div class="poi-detail-story" id="poi-detail-story"></div>
+    `;
 
-// 2️⃣ Gán text cho story bằng textContent → luôn hiển thị đầy đủ, an toàn
-  const storyEl = document.getElementById("poi-detail-story");
-  if (storyEl) {
-    storyEl.textContent = storyFull;
-  }
+    // 2️⃣ Gán text cho story bằng textContent → luôn hiển thị đầy đủ, an toàn
+      const storyEl = document.getElementById("poi-detail-story");
+      if (storyEl) {
+        storyEl.textContent = storyFull;
+      }
     document.body.classList.add('has-detail');
 
     if (map && poi.lat && poi.lon && !skipMove) {
       isProgrammaticMove = true;
       map.easeTo({
-        center: [poi.lon, poi.lat],
+        //center: [poi.lon, poi.lat],
         zoom: map.getZoom(),
         essential: true
       });
