@@ -104,7 +104,16 @@ main {
       transition: all 0.2s ease;
       font-weight: 500;
     }
-
+    .poi-score {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #e3f2fd;
+      color: #0d47a1;
+      font-weight: 600;
+      white-space: nowrap;
+      margin-left: auto;
+    }
     button:hover {
       background: #1e88e5;
     }
@@ -333,6 +342,11 @@ main {
       margin-bottom: 4px;
     }
 
+.poi-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
     .poi-detail-address {
       font-size: 0.8rem;
       color: #546e7a;
@@ -1278,29 +1292,47 @@ document.documentElement.style.setProperty("--sidebar-height",
     const addr      = getAddress(poi);
     const storyFull = getStory(poi) || "";
 
+    let scoreText = "";
+    if (typeof poi.score === "number") {
+      const rounded = Math.round(poi.score * 100) / 10;
+      scoreText = rounded.toFixed(1);
+    }
 
     const imgSrc = poi.reference
       ? `./images/${poi.reference.toLowerCase()}.jpg`
       : "";
 
-    poiDetailEl.innerHTML = `
-      <div class="poi-detail-img-wrapper">
-        <img
-          src="${imgSrc}"
-          class="poi-detail-img"
-          alt="${title}"
-          onerror="this.style.display='none';"
-        />
-      </div>
-      <div class="poi-detail-title">${title}</div>
-      <div class="poi-detail-address">${addr}</div>
-      <button type="button"
-        class="poi-detail-listen"
-        onclick="playPoiStory(${idx})">
-        ${t.ttsLabel}
-      </button>
-    <div class="poi-detail-story" id="poi-detail-story"></div>
-  `;
+poiDetailEl.innerHTML = `
+  <div class="poi-detail-img-wrapper">
+    <img
+      src="${imgSrc}"
+      class="poi-detail-img"
+      alt="${title}"
+      onerror="this.style.display='none';"
+    />
+  </div>
+
+  <!-- header: title + score trên cùng một hàng -->
+  <div class="poi-detail-header">
+    <div class="poi-detail-title">${title}</div>
+    ${
+      scoreText
+        ? `<div class="poi-score">⭐ ${scoreText}/10</div>`
+        : ""
+    }
+  </div>
+
+  <div class="poi-detail-address">${addr}</div>
+
+  <button type="button"
+    class="poi-detail-listen"
+    onclick="playPoiStory(${idx})">
+    ${t.ttsLabel}
+  </button>
+
+  <div class="poi-detail-story" id="poi-detail-story"></div>
+`;
+
 // 2️⃣ Gán text cho story bằng textContent → luôn hiển thị đầy đủ, an toàn
   const storyEl = document.getElementById("poi-detail-story");
   if (storyEl) {
