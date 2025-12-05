@@ -1149,7 +1149,7 @@ main {
     map.on("moveend", () => {
       if (isProgrammaticMove) {
         isProgrammaticMove = false;
-        updateNearbyList();
+        //updateNearbyList();
         return;
       }
       updateNearbyList();
@@ -1401,7 +1401,7 @@ main {
     if (map && poi.lat && poi.lon && !skipMove) {
       isProgrammaticMove = true;
       map.easeTo({
-        //center: [poi.lon, poi.lat],
+        center: [poi.lon, poi.lat],
         zoom: map.getZoom(),
         essential: true
       });
