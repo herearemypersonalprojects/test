@@ -182,12 +182,24 @@ main {
 .map-sidebar-wrapper {
   display: flex;
   flex-direction: column;
+    flex: 1 1 auto;
+  min-height: 0;
   height: calc(100vh - var(--header-height)); /* tổng phần dưới */
 }
 
 
 #map {
-  height: 50vh; /* chiều cao map khít */
+  height: calc(100dvh - var(--header-height) - var(--sidebar-height) - 20vh);
+}
+.my-element {
+  /* Fallback cho trình duyệt không hỗ trợ dvh */
+  height: calc(100vh - var(--header-height) - var(--sidebar-height) - 20vh);
+}
+
+@supports (height: 100dvh) {
+  .my-element {
+    height: calc(100dvh - var(--header-height) - var(--sidebar-height) - 20vh);
+  }
 }
 
 
@@ -275,8 +287,10 @@ main {
       min-width: 0;
     }
 :root {
-  --header-h: 60px;
+  --header-height: 60px;
+  --sidebar-height: 200px;
 }
+
     /* PANEL CHI TIẾT Ở NỬA DƯỚI */
 #poi-detail {
   display: none;
