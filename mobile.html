@@ -1147,16 +1147,43 @@ main {
     });
 
     map.on("moveend", () => {
+      // Nếu là di chuyển do code (flyTo, easeTo khi chọn POI, locate...)
+      // thì chỉ reset cờ và không cập nhật nearby
       if (isProgrammaticMove) {
         isProgrammaticMove = false;
-        //updateNearbyList();
         return;
       }
+
+      // Trước khi updateNearbyList, ghi nhớ trạng thái detail + POI đang chọn
+      const hadDetailBeforeMove = document.body.classList.contains('has-detail');
+      const activeIdxBeforeMove = selectedPoiIdx;
+
+      // Cập nhật danh sách POI theo center mới
       updateNearbyList();
+
+      // Nếu trước đó đang mở detail và có POI đang được chọn
+      if (hadDetailBeforeMove && activeIdxBeforeMove !== null) {
+        // Kiểm tra xem POI đang active còn nằm trong danh sách nearby mới hay không
+        const stillInNearby = lastNearbyPois.some(p => p._idx === activeIdxBeforeMove);
+
+        if (stillInNearby) {
+          // ✅ POI vẫn còn trong danh sách mới:
+          //    - Giữ nguyên panel chi tiết
+          //    - Re-highlight marker tương ứng (vì marker vừa được tạo lại)
+          highlightMarkerForPoiIdx(activeIdxBeforeMove);
+          // Không gọi hidePoiDetail(), tức là giữ nguyên detail đang hiển thị
+          return;
+        }
+      }
+
+      // ❌ Nếu không còn detail trước đó,
+      //    hoặc POI active đã bị loại khỏi danh sách nearby mới
+      //    → ẩn panel detail + bỏ highlight
       if (document.body.classList.contains('has-detail')) {
         hidePoiDetail();
       }
     });
+
 
     map.on("click", (e) => {
       if (!e.originalEvent.target.closest('.maplibregl-marker')) {
