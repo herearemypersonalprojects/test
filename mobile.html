@@ -189,16 +189,16 @@ main {
 
 
 #map {
-  height: calc(100dvh - var(--header-height) - var(--sidebar-height) - 20vh);
+  height: calc(100dvh - var(--header-height) - var(--sidebar-height) );
 }
 .my-element {
   /* Fallback cho trình duyệt không hỗ trợ dvh */
-  height: calc(100vh - var(--header-height) - var(--sidebar-height) - 20vh);
+  height: calc(100vh - var(--header-height) - var(--sidebar-height) );
 }
 
 @supports (height: 100dvh) {
   .my-element {
-    height: calc(100dvh - var(--header-height) - var(--sidebar-height) - 20vh);
+    height: calc(100dvh - var(--header-height) - var(--sidebar-height) );
   }
 }
 
