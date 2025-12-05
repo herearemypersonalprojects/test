@@ -34,18 +34,23 @@
   }
 }
 function onChangeRadius(radius) {
-  gtag('event', 'change_radius', {
-    'radius_m': radius,
-    'mode': 'mobile'
-  });
+  if (window.gtag && window.LOZU_GA_ID) {
+    gtag('event', 'change_radius', {
+      'radius_m': radius,
+      'mode': 'web'
+    });
+  }
 }
 
 function onChangePriority(priority) {
-  gtag('event', 'change_priority', {
-    'priority': priority, // nearest | famous
-    'mode': 'mobile'
-  });
+  if (window.gtag && window.LOZU_GA_ID) {
+    gtag('event', 'change_priority', {
+      'priority': priority, // nearest | famous
+      'mode': 'web'
+    });
+  }
 }
+
 
   </script>
 
@@ -1124,6 +1129,7 @@ function getUiLangId() {
 
     el.addEventListener("click", (e) => {
       e.stopPropagation();
+      onPoiClick(poi);          // 👈 log GA
       highlightMarkerForPoiIdx(poi._idx);
       highlightPoiListItem(poi._idx);
       updatePopupContent();
@@ -1459,12 +1465,14 @@ function getUiLangId() {
       currentRadiusKm = parseFloat(radiusSelect.value);
       updateNearbyList();
       fitToNearbyPois();
+      onChangeRadius(currentRadiusKm);
     });
 
     prioritySelect.addEventListener("change", () => {
       currentPriority = prioritySelect.value || "nearest";
       updateNearbyList();
       fitToNearbyPois();
+      onChangePriority(currentPriority);
     });
 
     maxPointsSelect.addEventListener("change", () => {

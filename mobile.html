@@ -22,29 +22,35 @@
       }
     });
 
-    function onPoiClick(poi) {
+  function onPoiClick(poi) {
   if (window.gtag && window.LOZU_GA_ID) {
     gtag('event', 'click_poi', {
       'poi_reference': poi.reference,
       'poi_name': poi.name,
       'score': poi.score || 0,
-      'mode': 'web' // hoặc 'mobile'
+      'mode': 'mobile' // hoặc 'mobile'
     });
   }
 }
 function onChangeRadius(radius) {
-  gtag('event', 'change_radius', {
-    'radius_m': radius,
-    'mode': 'mobile'
-  });
+  if (window.gtag && window.LOZU_GA_ID) {
+    gtag('event', 'change_radius', {
+      'radius_m': radius,
+      'mode': 'mobile'
+    });
+  }
 }
 
 function onChangePriority(priority) {
-  gtag('event', 'change_priority', {
-    'priority': priority, // nearest | famous
-    'mode': 'mobile'
-  });
+  if (window.gtag && window.LOZU_GA_ID) {
+    gtag('event', 'change_priority', {
+      'priority': priority, // nearest | famous
+      'mode': 'mobile'
+    });
+  }
 }
+
+
 
   </script>
   <!-- favicon -->
@@ -353,7 +359,7 @@ main {
   flex-shrink: 0;
 
   /* chiều cao khít 100% màn hình */
-  height: calc(100vh - var(--header-h) - 50vh);
+  height: calc(100vh - var(--header-height) - 50vh);
   overflow-y: auto;
 }
 
@@ -575,9 +581,7 @@ main {
     if (!langParam) return languageConfigs[0];
     return languageConfigs.find(cfg => cfg.id === langParam) || languageConfigs[0];
   }
-document.documentElement.style.setProperty("--header-h",
-  document.querySelector("header").offsetHeight + "px"
-);
+
 document.documentElement.style.setProperty("--header-height",
   document.querySelector("header").offsetHeight + "px"
 );
@@ -1003,6 +1007,7 @@ document.documentElement.style.setProperty("--sidebar-height",
 
     el.addEventListener("click", (e) => {
       e.stopPropagation();
+      onPoiClick(poi);          // 👈 log GA
       showPoiDetail(poi._idx);
     });
 
@@ -1245,12 +1250,14 @@ document.documentElement.style.setProperty("--sidebar-height",
       currentRadiusKm = parseFloat(radiusSelect.value);
       updateNearbyList();
       fitToNearbyPois();
+      onChangeRadius(currentRadiusKm);
     });
 
     prioritySelect.addEventListener("change", () => {
       currentPriority = prioritySelect.value || "nearest";
       updateNearbyList();
       fitToNearbyPois();
+      onChangePriority(currentPriority);
     });
 
     maxPointsSelect.addEventListener("change", () => {
