@@ -44,7 +44,9 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/castle_logo_16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/castle_logo_32.png">
 
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- viewport-fit=cover cho phép mình dùng toàn bộ màn hình và điều chỉnh safe-area bằng CSS -->
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <link href="https://unpkg.com/maplibre-gl@3.5.2/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@3.5.2/dist/maplibre-gl.js"></script>
@@ -54,6 +56,15 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+    }
+    :root {
+      /* khoảng cách an toàn phía trên cho iPhone có tai thỏ */
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+
+    :root {
+      --header-height: 60px;
+      --sidebar-height: 200px;
     }
 
 body {
@@ -83,7 +94,10 @@ main {
     header {
       background: #0d47a1;
       color: #e3f2fd;
-      padding: 8px 12px;
+
+      /* trên iPhone: thêm safe-area phía trên, còn các cạnh khác giữ nguyên */
+      padding: calc(8px + var(--safe-top)) 12px 8px;
+
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -92,6 +106,7 @@ main {
       border-bottom: 2px solid #64b5f6;
       flex-shrink: 0;
     }
+
 
     header .left {
       display: flex;
@@ -329,10 +344,6 @@ main {
       flex: 1;
       min-width: 0;
     }
-:root {
-  --header-height: 60px;
-  --sidebar-height: 200px;
-}
 
     /* PANEL CHI TIẾT Ở NỬA DƯỚI */
 #poi-detail {
