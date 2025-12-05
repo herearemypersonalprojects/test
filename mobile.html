@@ -4,60 +4,45 @@
   <meta charset="UTF-8" />
   <title>Paris Discovery – Mobile</title>
   <!-- GA dùng chung -->
+  <!-- GA dùng chung -->
   <script src="ga-lozu.js"></script>
-
-  <!-- Cấu hình cho Mobile Mode -->
   <script>
-    window.addEventListener('load', function() {
-      if (window.gtag && window.LOZU_GA_ID) {
-        gtag('config', window.LOZU_GA_ID, {
-          'page_title': 'Lozu – Mobile Mode',
-          'page_path': '/mobile'
-        });
+    window.addEventListener('load', function () {
+      GA_LOZU && GA_LOZU.initPage({
+        title: 'Lozu – Mobile Mode',
+        path: '/mobile',
+        mode: 'mobile'
+      });
+    });
 
-        // Event phụ (tùy chọn)
-        gtag('event', 'view_mode', {
-          'mode': 'mobile'
-        });
+    // log click POI trên mobile
+    function onPoiClick(poi) {
+      if (window.GA_LOZU) {
+        GA_LOZU.trackPoiClick('mobile', poi);
       }
-    });
+    }
 
-  function onPoiClick(poi) {
-  if (window.gtag && window.LOZU_GA_ID) {
-    gtag('event', 'click_poi', {
-      'poi_reference': poi.reference,
-      'poi_name': poi.name,
-      'score': poi.score || 0,
-      'mode': 'mobile' // hoặc 'mobile'
-    });
-  }
-}
-function onChangeRadius(radius) {
-  if (window.gtag && window.LOZU_GA_ID) {
-    gtag('event', 'change_radius', {
-      'radius_m': radius,
-      'mode': 'mobile'
-    });
-  }
-}
+    // log thay đổi bán kính
+    function onChangeRadius(radiusKm) {
+      if (window.GA_LOZU) {
+        GA_LOZU.trackRadiusChange('mobile', radiusKm);
+      }
+    }
 
-function onChangePriority(priority) {
-  if (window.gtag && window.LOZU_GA_ID) {
-    gtag('event', 'change_priority', {
-      'priority': priority, // nearest | famous
-      'mode': 'mobile'
-    });
-  }
-}
-
-
+    // log thay đổi priority
+    function onChangePriority(priority) {
+      if (window.GA_LOZU) {
+        GA_LOZU.trackPriorityChange('mobile', priority);
+      }
+    }
 
   </script>
+
+
   <!-- favicon -->
   <link rel="icon" type="image/svg+xml" href="/icons/castle_favicon.ico">
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/castle_logo_16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/castle_logo_32.png">
-  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 

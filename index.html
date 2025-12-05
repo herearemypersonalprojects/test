@@ -5,30 +5,21 @@
   <title>Paris Discovery – Loader</title>
   <!-- GA dùng chung -->
   <script src="ga-lozu.js"></script>
-  <!-- Cấu hình page view cho index -->
   <script>
-    window.addEventListener('load', function() {
-      if (window.gtag && window.LOZU_GA_ID) {
-        gtag('config', window.LOZU_GA_ID, {
-          'page_title': 'Lozu – Index',
-          'page_path': '/index'   // bạn thích đặt /index.html cũng được
-        });
-
-        // Gửi thêm event tùy thích (không bắt buộc)
-        gtag('event', 'view_index', {
-          'mode': 'index',
-          'description': 'User opened index page'
-        });
-      }
+    window.addEventListener('load', function () {
+      GA_LOZU && GA_LOZU.initPage({
+        title: 'Lozu – Index',
+        path: '/index'
+      });
     });
   </script>
+
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- favicon -->
   <link rel="icon" type="image/svg+xml" href="/icons/castle_favicon.ico">
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/castle_logo_16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/castle_logo_32.png">
-  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
 
   <style>
     body {
@@ -63,6 +54,10 @@
       } else {
         window.location.href = target;
       }
+
+      if (window.GA_LOZU) {
+        GA_LOZU.track('select_mode', { mode });
+      }
     }
 
     if (mode === "web") {
@@ -90,12 +85,8 @@
 
 <script>
   function selectMode(mode) {
-    // Gửi event chọn mode
-    if (window.gtag && window.LOZU_GA_ID) {
-      gtag('event', 'select_mode', {
-        'mode': mode,          // 'web' hoặc 'mobile'
-        'page_path': '/index'
-      });
+    if (window.GA_LOZU) {
+      GA_LOZU.track('select_mode', { mode });
     }
 
     // Điều hướng

@@ -6,59 +6,35 @@
 
   <!-- GA dùng chung -->
   <script src="ga-lozu.js"></script>
-
-  <!-- Cấu hình cho Web Mode -->
   <script>
-    window.addEventListener('load', function() {
-      if (window.gtag && window.LOZU_GA_ID) {
-        gtag('config', window.LOZU_GA_ID, {
-          'page_title': 'Lozu – Web Mode',
-          'page_path': '/web'
-        });
-
-        // Event phụ (tùy chọn)
-        gtag('event', 'view_mode', {
-          'mode': 'web'
-        });
-      }
+    window.addEventListener('load', function () {
+      GA_LOZU && GA_LOZU.initPage({
+        title: 'Lozu – Web Mode',
+        path: '/web',
+        mode: 'web'
+      });
     });
 
     function onPoiClick(poi) {
-  if (window.gtag && window.LOZU_GA_ID) {
-    gtag('event', 'click_poi', {
-      'poi_reference': poi.reference,
-      'poi_name': poi.name,
-      'score': poi.score || 0,
-      'mode': 'web' // hoặc 'mobile'
-    });
-  }
-}
-function onChangeRadius(radius) {
-  if (window.gtag && window.LOZU_GA_ID) {
-    gtag('event', 'change_radius', {
-      'radius_m': radius,
-      'mode': 'web'
-    });
-  }
-}
+      GA_LOZU && GA_LOZU.trackPoiClick('web', poi);
+    }
 
-function onChangePriority(priority) {
-  if (window.gtag && window.LOZU_GA_ID) {
-    gtag('event', 'change_priority', {
-      'priority': priority, // nearest | famous
-      'mode': 'web'
-    });
-  }
-}
+    function onChangeRadius(radiusKm) {
+      GA_LOZU && GA_LOZU.trackRadiusChange('web', radiusKm);
+    }
 
+    function onChangePriority(priority) {
+      GA_LOZU && GA_LOZU.trackPriorityChange('web', priority);
+    }
 
   </script>
+
+
 
   <!-- favicon -->
   <link rel="icon" type="image/svg+xml" href="/icons/castle_favicon.ico">
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/castle_logo_16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/castle_logo_32.png">
-  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
