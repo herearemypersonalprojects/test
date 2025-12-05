@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Paris Discovery – Loader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- favicon -->
+  <link rel="icon" type="image/svg+xml" href="/icons/castle_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/castle_logo_16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/castle_logo_32.png">
+  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #0d47a1;
+      color: #e3f2fd;
+    }
+  </style>
+</head>
+<body>
+<div>Loading Paris Discovery…</div>
+
+<script>
+  (function () {
+    // Đọc tham số URL: ?mode=web / ?mode=mobile
+    var params = new URLSearchParams(window.location.search);
+    var mode = (params.get("mode") || "").toLowerCase();
+
+    function goTo(target) {
+      // Giữ lại query string trừ tham số mode (nếu bạn muốn clean hơn)
+      // Ở đây: mình bỏ luôn mode, giữ các tham số khác.
+      var newParams = new URLSearchParams(window.location.search);
+      newParams.delete("mode");
+      var qs = newParams.toString();
+      if (qs) {
+        window.location.href = target + "?" + qs;
+      } else {
+        window.location.href = target;
+      }
+    }
+
+    if (mode === "web") {
+      goTo("web.html");
+      return;
+    }
+
+    if (mode === "mobile") {
+      goTo("mobile.html");
+      return;
+    }
+
+    // Không có mode → tự detect
+    var isMobile =
+      /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      window.innerWidth <= 768;
+
+    if (isMobile) {
+      goTo("mobile.html");
+    } else {
+      goTo("web.html");
+    }
+  })();
+</script>
+</body>
+</html>

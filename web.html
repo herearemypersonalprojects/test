@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Paris Discovery – Web</title>
+
+  <!-- favicon -->
+  <link rel="icon" type="image/svg+xml" href="/icons/castle_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/castle_logo_16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/castle_logo_32.png">
+  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link href="https://unpkg.com/maplibre-gl@3.5.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.5.2/dist/maplibre-gl.js"></script>
+
+  <style>
+    /* === Base layout dành cho màn hình lớn (Web) === */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family:
+        system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "Helvetica Neue", Arial,
+        "Noto Sans", sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-color: #f3f7fb;
+      color: #0d1b2a;
+      font-size: 16px;
+    }
+
+    /* Header */
+    header {
+      background: #0d47a1;
+      color: #e3f2fd;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+      border-bottom: 3px solid #64b5f6;
+    }
+
+    header .left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 60%;
+    }
+
+    header .title {
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #bbdefb;
+    }
+
+    header .subtitle {
+      font-size: 0.9rem;
+      opacity: 0.95;
+      color: #e3f2fd;
+    }
+
+    header .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+
+    /* Buttons */
+    button {
+      border: 1px solid #64b5f6;
+      border-radius: 4px;
+      padding: 9px 18px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: #1565c0;
+      color: #e3f2fd;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      background: #1e88e5;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      color: #e3f2fd;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+      background: #0b3c75;
+      border-color: #54759b;
+    }
+
+    /* Inline TTS btn trong item (chỉ hiện khi active) */
+    .tts-inline {
+      margin-top: 6px;
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      border: 1px solid #64b5f6;
+      background: #1565c0;
+      color: #e3f2fd;
+      display: none;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .poi-item.active .tts-inline {
+      display: inline-flex;
+    }
+
+    /* Language switch */
+    .lang-switch {
+      position: relative;
+    }
+
+    .lang-toggle {
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      background: #1e88e5;
+      border: 2px solid #bbdefb;
+      cursor: pointer;
+      font-size: 1.3rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lang-menu {
+      position: absolute;
+      right: 0;
+      top: 110%;
+      background: #0d47a1;
+      border-radius: 6px;
+      padding: 6px;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.8);
+      display: none;
+      z-index: 20;
+      min-width: 180px;
+      border: 2px solid #64b5f6;
+    }
+
+    .lang-menu.open {
+      display: block;
+    }
+
+    .lang-menu button {
+      background: transparent;
+      border-radius: 4px;
+      border: none;
+      padding: 7px 10px;
+      color: #e3f2fd;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      text-align: left;
+      white-space: nowrap;
+      box-shadow: none;
+      transition: background 0.15s ease;
+    }
+
+    .lang-menu button:hover {
+      background: #1565c0;
+      color: #e3f2fd;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Main layout Web: map + sidebar song song */
+    main {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    #map {
+      flex: 2;
+      min-width: 0;
+    }
+
+    .sidebar {
+      flex: 1;
+      min-width: 280px;
+      max-width: 420px;
+      border-left: 2px solid #64b5f6;
+      display: flex;
+      flex-direction: column;
+      background-color: #f5f9ff;
+      color: #0d1b2a;
+    }
+
+    .sidebar-header {
+      padding: 14px 16px;
+      border-bottom: 2px solid #64b5f6;
+      font-size: 1rem;
+      background: #e3f2fd;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sidebar-header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-header-top span {
+      font-weight: 700;
+      color: #0d47a1;
+      font-size: 1.05rem;
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .radius-row,
+    .priority-row,
+    .count-row {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex: 1 1 0;
+      font-size: 0.9rem;
+      color: #1b3551;
+      font-weight: 500;
+      min-width: 0;
+    }
+
+    .radius-select,
+    .priority-select,
+    .count-select {
+      font-size: 0.9rem;
+      padding: 6px 9px;
+      border-radius: 4px;
+      border: 1px solid #64b5f6;
+      background: #ffffff;
+      color: #0d1b2a;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .poi-list {
+      list-style: none;
+      padding: 12px 14px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* POI item */
+    .poi-item {
+      background: #ffffff;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border: 1px solid #d0d7e2;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.9rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Nội dung POI: ảnh full chiều ngang + text bên dưới */
+    .poi-content {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .poi-thumb {
+      width: 100%;
+      height: auto;
+      max-height: 260px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #cfd8dc;
+      display: block;
+    }
+
+    .poi-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .poi-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .poi-score {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #e3f2fd;
+      color: #0d47a1;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .poi-item:hover {
+      background: #f1f5ff;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+      transform: translateY(-1px);
+      border-color: #64b5f6;
+    }
+
+    .poi-item.active {
+      border: 2px solid #1e88e5;
+      background: #e3f2fd;
+      box-shadow: 0 4px 12px rgba(30, 136, 229, 0.3);
+    }
+
+    .poi-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #0d47a1;
+      font-size: 1rem;
+    }
+
+    .poi-address {
+      color: #546e7a;
+      margin-bottom: 4px;
+      font-size: 0.85rem;
+    }
+
+    .poi-story {
+      font-size: 0.85rem;
+      color: #263238;
+      margin-top: 4px;
+      line-height: 1.5;
+      max-height: 4.5em;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+
+    .poi-item.active .poi-story {
+      max-height: 500px;
+      overflow: visible;
+    }
+
+    .empty {
+      font-size: 0.9rem;
+      color: #607d8b;
+      padding: 10px;
+      text-align: center;
+    }
+
+    /* Popup */
+    .maplibregl-popup-content {
+      font-size: 0.9rem;
+      border-radius: 6px;
+      padding: 10px;
+      border: 2px solid #64b5f6;
+      background: #f5f9ff;
+      color: #0d1b2a;
+    }
+
+    .popup-title {
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: #0d47a1;
+    }
+
+    .popup-address {
+      font-size: 0.8rem;
+      color: #546e7a;
+      margin-bottom: 6px;
+    }
+
+    .popup-story {
+      font-size: 0.8rem;
+      color: #263238;
+      max-width: 280px;
+      margin-bottom: 8px;
+    }
+
+    .popup-tts-btn {
+      margin-top: 6px;
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      border: 1px solid #64b5f6;
+      cursor: pointer;
+      background: #1565c0;
+      color: #e3f2fd;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .popup-tts-btn:hover {
+      background: #1e88e5;
+    }
+
+    /* Markers */
+    .poi-marker {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #1565c0;
+      border: 3px solid #bbdefb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+      font-size: 16px;
+      color: #e3f2fd;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0.2s ease;
+      cursor: pointer;
+    }
+
+    .poi-marker::after {
+      content: "⚜️";
+      font-size: 14px;
+      line-height: 1;
+      text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+    }
+
+    .poi-marker.highlighted {
+      transform: scale(1.3);
+      box-shadow: 0 0 20px rgba(66, 165, 245, 0.9);
+      z-index: 10;
+      background: #42a5f5;
+      border-color: #e3f2fd;
+    }
+
+    .user-marker {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #1e8449;
+      border: 3px solid #e3f2fd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.7);
+      font-size: 16px;
+      z-index: 5;
+    }
+
+    .user-marker::after {
+      content: "👤";
+      font-size: 14px;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="left">
+    <div id="app-title" class="title">PARIS DISCOVERY</div>
+    <div id="app-subtitle" class="subtitle">
+      Move around to discover heritage sites near you.
+    </div>
+  </div>
+  <div class="controls">
+    <div class="lang-switch">
+      <button id="lang-toggle" class="lang-toggle" aria-label="Change language">🇬🇧</button>
+      <div id="lang-menu" class="lang-menu"></div>
+    </div>
+    <button id="locate-btn">📍 My location</button>
+  </div>
+</header>
+
+<main>
+  <div id="map"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-header-top">
+        <span id="nearby-title">Nearby places</span>
+      </div>
+
+      <div class="filter-row">
+        <div class="radius-row">
+          <label id="radius-label" for="radius">Radius:</label>
+          <select id="radius" class="radius-select">
+            <option value="0.5" selected>500 m</option>
+            <option value="1">1 km</option>
+            <option value="2">2 km</option>
+            <option value="5">5 km</option>
+            <option value="10">10 km</option>
+          </select>
+        </div>
+
+        <div class="priority-row">
+          <label id="priority-label" for="priority-filter">Priority:</label>
+          <select id="priority-filter" class="priority-select">
+            <option value="topscore">Most famous</option>
+            <option value="nearest">Nearest</option>
+          </select>
+        </div>
+
+        <div class="count-row">
+          <label id="count-label" for="max-points">Places:</label>
+          <select id="max-points" class="count-select">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <ul id="poi-list" class="poi-list">
+      <li id="empty-placeholder" class="empty">
+        Move the map or click “📍 My location” to see nearby heritage sites.
+      </li>
+    </ul>
+  </aside>
+</main>
+
+<script>
+  /* ==== JS giống bản gốc, chỉ khác hàm isMobile() ==== */
+
+  let map;
+  let pois = [];
+  let markers = [];
+  let currentRadiusKm = 0.5;
+  let currentMaxPoints = 10;
+  let currentPriority = "topscore";
+
+  let isProgrammaticMove = false;
+
+  // LUÔN coi đây là bản Web
+  function isMobile() {
+    return false;
+  }
+
+  const languageConfigs = [
+    { id: "en", key: "story_en",         flag: "🇬🇧", label: "English",       ttsLang: "en-US" },
+    { id: "fr", key: "story",            flag: "🇫🇷", label: "Français",      ttsLang: "fr-FR" },
+    { id: "vi", key: "story_vn",         flag: "🇻🇳", label: "Tiếng Việt",    ttsLang: "vi-VN" },
+    { id: "pt", key: "story_portuguese", flag: "🇵🇹", label: "Português",     ttsLang: "pt-PT" },
+    { id: "ar", key: "story_arabic",     flag: "🇸🇦", label: "العربية",       ttsLang: "ar-SA" },
+    { id: "hi", key: "story_hindi",      flag: "🇮🇳", label: "हिन्दी",        ttsLang: "hi-IN" },
+    { id: "bn", key: "story_bengali",    flag: "🇧🇩", label: "বাংলা",         ttsLang: "bn-BD" },
+    { id: "ko", key: "story_korean",     flag: "🇰🇷", label: "한국어",        ttsLang: "ko-KR" },
+    { id: "tr", key: "story_turkish",    flag: "🇹🇷", label: "Türkçe",       ttsLang: "tr-TR" },
+    { id: "sv", key: "story_swedish",    flag: "🇸🇪", label: "Svenska",      ttsLang: "sv-SE" },
+    { id: "de", key: "story_german",     flag: "🇩🇪", label: "Deutsch",       ttsLang: "de-DE" },
+    { id: "zh", key: "story_chinese",    flag: "🇨🇳", label: "中文",          ttsLang: "zh-CN" },
+    { id: "ja", key: "story_japanese",   flag: "🇯🇵", label: "日本語",        ttsLang: "ja-JP" },
+    { id: "ru", key: "story_russian",    flag: "🇷🇺", label: "Русский",      ttsLang: "ru-RU" },
+    { id: "it", key: "story_italian",    flag: "🇮🇹", label: "Italiano",      ttsLang: "it-IT" },
+  ];
+
+  function detectInitialLang() {
+    var params = new URLSearchParams(window.location.search);
+    var langParam = (params.get("lang") || "").toLowerCase(); // "vi", "fr", ...
+    if (!langParam) {
+      return languageConfigs[0]; // mặc định English
+    }
+    var match = languageConfigs.find(function (cfg) {
+      return cfg.id === langParam;
+    });
+    return match || languageConfigs[0];
+  }
+
+  let availableLanguages = languageConfigs.slice();
+  let currentLangConfig = detectInitialLang(); // đọc từ ?lang=...
+
+  let voices = [];
+  let currentUtterance = null;
+
+  const PARIS_CENTER = { lat: 48.8566, lon: 2.3522 };
+  const NOTRE_DAME   = { lat: 48.852968, lon: 2.349902 };
+
+  let userLocation = null;
+  let userMarker = null;
+
+  let lastNearbyPois = [];
+  let highlightedPoiIdx = null;
+
+  const locateBtn       = document.getElementById("locate-btn");
+  const radiusSelect    = document.getElementById("radius");
+  const poiListEl       = document.getElementById("poi-list");
+  const nearbyTitleEl   = document.getElementById("nearby-title");
+  const appTitleEl      = document.getElementById("app-title");
+  const appSubtitleEl   = document.getElementById("app-subtitle");
+  const radiusLabelEl   = document.getElementById("radius-label");
+  const priorityLabelEl = document.getElementById("priority-label");
+  const prioritySelect  = document.getElementById("priority-filter");
+  const countLabelEl    = document.getElementById("count-label");
+  const maxPointsSelect = document.getElementById("max-points");
+
+  const langToggleBtn = document.getElementById("lang-toggle");
+  const langMenu      = document.getElementById("lang-menu");
+
+const i18n = {
+  // 🇻🇳 Tiếng Việt
+  vi: {
+    appTitle:       'Khám Phá Paris',
+    appSubtitle:    'Đi đến đâu, khám phá di sản xung quanh đó',
+    locate:         '📍 Vị trí của tôi',
+    nearbyDefault:  'Điểm gần bạn',
+    radiusLabel:    'Bán kính:',
+    empty: r => `Không có di sản nào trong bán kính ${r} km quanh vị trí hiện tại của bản đồ.`,
+    emptyInitial:   'Di chuyển bản đồ hoặc bấm "📍 Vị trí của tôi" để xem các di sản gần bạn.',
+    ttsLabel:       '🔊 Nghe kể chuyện',
+    ttsNotSupported:'Trình duyệt không hỗ trợ đọc văn bản (Speech Synthesis).',
+    ttsNoText:      'Không có nội dung để đọc.',
+    priorityLabel:  'Ưu tiên:',
+    priorityNearest:'Gần nhất',
+    priorityTopScore:'Nổi tiếng nhất',
+    countLabel:     'Số điểm:',
+  },
+
+  // 🇬🇧 English
+  en: {
+    appTitle:       'PARIS DISCOVERY',
+    appSubtitle:    'Move around to discover heritage sites near you.',
+    locate:         '📍 My location',
+    nearbyDefault:  'Nearby places',
+    radiusLabel:    'Radius:',
+    empty: r => `No heritage site found within ${r} km of the current map center.`,
+    emptyInitial:   'Move the map or click "📍 My location" to see nearby heritage sites.',
+    ttsLabel:       '🔊 Listen to story',
+    ttsNotSupported:'Your browser does not support text-to-speech (Speech Synthesis).',
+    ttsNoText:      'No story available to read.',
+    priorityLabel:  'Priority:',
+    priorityNearest:'Nearest',
+    priorityTopScore:'Most famous',
+    countLabel:     'Places:',
+  },
+
+  // 🇫🇷 Français
+  fr: {
+    appTitle:       'Explorez Paris',
+    appSubtitle:    'Explorez les sites patrimoniaux proches.',
+    locate:         '📍 Ma position',
+    nearbyDefault:  'Lieux à proximité',
+    radiusLabel:    'Rayon :',
+    empty: r => `Aucun site patrimonial dans un rayon de ${r} km autour du centre de la carte.`,
+    emptyInitial:   'Déplacez la carte ou cliquez sur "📍 Ma position" pour voir les sites patrimoniaux à proximité.',
+    ttsLabel:       '🔊 Écouter l’histoire',
+    ttsNotSupported:'Votre navigateur ne supporte pas la synthèse vocale (Speech Synthesis).',
+    ttsNoText:      'Aucun texte à lire pour ce lieu.',
+    priorityLabel:  'Priorité :',
+    priorityNearest:'Les plus proches',
+    priorityTopScore:'Les plus célèbres',
+    countLabel:     'Nombre :',
+  },
+
+  // 🇵🇹 Português
+  pt: {
+    appTitle:       'Descubra Paris',
+    appSubtitle:    'Mova-se para descobrir os locais históricos perto de você.',
+    locate:         '📍 Minha localização',
+    nearbyDefault:  'Locais próximos',
+    radiusLabel:    'Raio:',
+    empty: r => `Nenhum local histórico encontrado num raio de ${r} km do centro do mapa.`,
+    emptyInitial:   'Mova o mapa ou clique em "📍 Minha localização" para ver os locais históricos próximos.',
+    ttsLabel:       '🔊 Ouvir a história',
+    ttsNotSupported:'O seu navegador não suporta síntese de voz (Speech Synthesis).',
+    ttsNoText:      'Não há texto disponível para este local.',
+    priorityLabel:  'Prioridade:',
+    priorityNearest:'Mais próximos',
+    priorityTopScore:'Mais famosos',
+    countLabel:     'Quantidade:',
+  },
+
+  // 🇸🇦 العربية
+  ar: {
+    appTitle:       'اكتشف باريس',
+    appSubtitle:    'تحرّك لاكتشاف المواقع التراثية القريبة منك.',
+    locate:         '📍 موقعي',
+    nearbyDefault:  'أماكن قريبة',
+    radiusLabel:    'نصف القطر:',
+    empty: r => `لا توجد مواقع تراثية ضمن دائرة نصف قطرها ${r} كم حول مركز الخريطة الحالي.`,
+    emptyInitial:   'حرّك الخريطة أو اضغط على "📍 موقعي" لرؤية المواقع التراثية القريبة.',
+    ttsLabel:       '🔊 الاستماع إلى القصة',
+    ttsNotSupported:'المتصفح لا يدعم تحويل النص إلى كلام (Speech Synthesis).',
+    ttsNoText:      'لا يوجد نص للقراءة لهذا الموقع.',
+    priorityLabel:  'الأولوية:',
+    priorityNearest:'الأقرب',
+    priorityTopScore:'الأشهر',
+    countLabel:     'العدد:',
+  },
+
+  // 🇮🇳 हिन्दी
+  hi: {
+    appTitle:       'पेरिस की खोज',
+    appSubtitle:    'अपने आसपास के विरासत स्थलों को खोजने के लिए घूमें।',
+    locate:         '📍 मेरा स्थान',
+    nearbyDefault:  'पास के स्थान',
+    radiusLabel:    'त्रिज्या:',
+    empty: r => `मानचित्र के वर्तमान केंद्र से ${r} किमी की त्रिज्या में कोई विरासत स्थल नहीं मिला।`,
+    emptyInitial:   'नक्शे को घुमाएँ या "📍 मेरा स्थान" दबाएँ ताकि पास के विरासत स्थल दिखें।',
+    ttsLabel:       '🔊 कहानी सुनें',
+    ttsNotSupported:'आपका ब्राउज़र टेक्स्ट-टू-स्पीच (Speech Synthesis) को सपोर्ट नहीं करता।',
+    ttsNoText:      'इस स्थान के लिए कोई पाठ उपलब्ध नहीं है।',
+    priorityLabel:  'प्राथमिकता:',
+    priorityNearest:'सबसे नज़दीकी',
+    priorityTopScore:'सबसे प्रसिद्ध',
+    countLabel:     'संख्या:',
+  },
+
+  // 🇧🇩 বাংলা
+  bn: {
+    appTitle:       'প্যারিস ঘুরে দেখুন',
+    appSubtitle:    'আপনার আশপাশের ঐতিহ্যবাহী স্থানগুলো খুঁজে পেতে নড়াচড়া করুন।',
+    locate:         '📍 আমার অবস্থান',
+    nearbyDefault:  'কাছাকাছি স্থান',
+    radiusLabel:    'ব্যাসার্ধ:',
+    empty: r => `মানচিত্রের বর্তমান কেন্দ্র থেকে ${r} কিমি ব্যাসার্ধের মধ্যে কোনো ঐতিহ্যবাহী স্থান পাওয়া যায়নি।`,
+    emptyInitial:   'মানচিত্র সরান অথবা "📍 আমার অবস্থান" চাপুন কাছাকাছি ঐতিহ্যবাহী স্থান দেখতে।',
+    ttsLabel:       '🔊 গল্প শুনুন',
+    ttsNotSupported:'আপনার ব্রাউজার টেক্সট-টু-স্পিচ (Speech Synthesis) সমর্থন করে না।',
+    ttsNoText:      'এই স্থানের জন্য কোনো লেখা নেই।',
+    priorityLabel:  'অগ্রাধিকার:',
+    priorityNearest:'সবচেয়ে নিকটবর্তী',
+    priorityTopScore:'সবচেয়ে বিখ্যাত',
+    countLabel:     'সংখ্যা:',
+  },
+
+  // 🇰🇷 한국어
+  ko: {
+    appTitle:       '파리를 발견하세요',
+    appSubtitle:    '주변의 유산 장소를 발견하기 위해 이동해 보세요.',
+    locate:         '📍 내 위치',
+    nearbyDefault:  '주변 장소',
+    radiusLabel:    '반경:',
+    empty: r => `현재 지도 중심에서 반경 ${r}km 안에 유산 장소가 없습니다.`,
+    emptyInitial:   '지도를 움직이거나 "📍 내 위치"를 눌러 주변 유산 장소를 확인하세요.',
+    ttsLabel:       '🔊 이야기 듣기',
+    ttsNotSupported:'브라우저가 텍스트 음성 변환(Speech Synthesis)을 지원하지 않습니다.',
+    ttsNoText:      '이 장소에 대해 읽을 수 있는 내용이 없습니다.',
+    priorityLabel:  '우선순위:',
+    priorityNearest:'가장 가까운',
+    priorityTopScore:'가장 유명한',
+    countLabel:     '개수:',
+  },
+
+  // 🇹🇷 Türkçe
+  tr: {
+    appTitle:       'Paris’i keşfet',
+    appSubtitle:    'Yakınınızdaki kültürel miras alanlarını keşfetmek için hareket edin.',
+    locate:         '📍 Konumum',
+    nearbyDefault:  'Yakın yerler',
+    radiusLabel:    'Yarıçap:',
+    empty: r => `Haritanın mevcut merkezi etrafında ${r} km yarıçap içinde herhangi bir miras alanı bulunamadı.`,
+    emptyInitial:   'Haritayı hareket ettirin veya "📍 Konumum" düğmesine tıklayın ve yakın miras alanlarını görün.',
+    ttsLabel:       '🔊 Hikâyeyi dinle',
+    ttsNotSupported:'Tarayıcınız metin okuma (Speech Synthesis) özelliğini desteklemiyor.',
+    ttsNoText:      'Bu yer için okunacak bir metin yok.',
+    priorityLabel:  'Öncelik:',
+    priorityNearest:'En yakın',
+    priorityTopScore:'En ünlü',
+    countLabel:     'Sayı:',
+  },
+
+  // 🇸🇪 Svenska
+  sv: {
+    appTitle:       'Upptäck Paris',
+    appSubtitle:    'Rör dig för att upptäcka kulturarvsplatser nära dig.',
+    locate:         '📍 Min position',
+    nearbyDefault:  'Platser i närheten',
+    radiusLabel:    'Radie:',
+    empty: r => `Inga kulturarvsplatser hittades inom ${r} km från kartans nuvarande centrum.`,
+    emptyInitial:   'Flytta kartan eller klicka på "📍 Min position" för att se kulturarvsplatser i närheten.',
+    ttsLabel:       '🔊 Lyssna på berättelsen',
+    ttsNotSupported:'Din webbläsare stöder inte text-till-tal (Speech Synthesis).',
+    ttsNoText:      'Det finns ingen text att läsa upp för den här platsen.',
+    priorityLabel:  'Prioritet:',
+    priorityNearest:'Närmast',
+    priorityTopScore:'Mest kända',
+    countLabel:     'Antal:',
+  },
+
+  // 🇩🇪 Deutsch
+  de: {
+    appTitle:       'Paris entdecken',
+    appSubtitle:    'Bewegen Sie sich, um Sehenswürdigkeiten in Ihrer Nähe zu entdecken.',
+    locate:         '📍 Mein Standort',
+    nearbyDefault:  'Orte in der Nähe',
+    radiusLabel:    'Radius:',
+    empty: r => `Keine Sehenswürdigkeit im Umkreis von ${r} km um die aktuelle Kartenmitte gefunden.`,
+    emptyInitial:   'Verschieben Sie die Karte oder klicken Sie auf "📍 Mein Standort", um nahegelegene Sehenswürdigkeiten zu sehen.',
+    ttsLabel:       '🔊 Geschichte anhören',
+    ttsNotSupported:'Ihr Browser unterstützt keine Sprachausgabe (Speech Synthesis).',
+    ttsNoText:      'Für diesen Ort gibt es keinen Text zum Vorlesen.',
+    priorityLabel:  'Priorität:',
+    priorityNearest:'Nächstgelegen',
+    priorityTopScore:'Am bekanntesten',
+    countLabel:     'Anzahl:',
+  },
+
+  // 🇨🇳 中文
+  zh: {
+    appTitle:       '探索巴黎',
+    appSubtitle:    '移动地图，发现您附近的文化遗产景点。',
+    locate:         '📍 我的位置',
+    nearbyDefault:  '附近地点',
+    radiusLabel:    '半径：',
+    empty: r => `在当前地图中心${r}公里范围内未找到任何文化遗产地点。`,
+    emptyInitial:   '移动地图或点击“📍 我的位置”来查看附近的文化遗产地点。',
+    ttsLabel:       '🔊 听故事',
+    ttsNotSupported:'您的浏览器不支持文本朗读（Speech Synthesis）。',
+    ttsNoText:      '此地点没有可朗读的内容。',
+    priorityLabel:  '优先级：',
+    priorityNearest:'最近',
+    priorityTopScore:'最著名',
+    countLabel:     '数量：',
+  },
+
+  // 🇯🇵 日本語
+  ja: {
+    appTitle:       'パリを発見',
+    appSubtitle:    '周辺の文化遺産を見つけるために移動してみましょう。',
+    locate:         '📍 現在地',
+    nearbyDefault:  '近くの場所',
+    radiusLabel:    '半径:',
+    empty: r => `現在の地図中心から半径${r}km以内に文化遺産は見つかりませんでした。`,
+    emptyInitial:   '地図を動かすか「📍 現在地」をタップして、近くの文化遺産を表示してください。',
+    ttsLabel:       '🔊 ストーリーを聞く',
+    ttsNotSupported:'ご利用のブラウザはテキスト読み上げ（Speech Synthesis）に対応していません。',
+    ttsNoText:      'この場所には読み上げるテキストがありません。',
+    priorityLabel:  '優先順位:',
+    priorityNearest:'最も近い',
+    priorityTopScore:'最も有名',
+    countLabel:     '件数:',
+  },
+
+  // 🇷🇺 Русский
+  ru: {
+    appTitle:       'Откройте для себя Париж',
+    appSubtitle:    'Передвигайтесь, чтобы находить объекты культурного наследия рядом с вами.',
+    locate:         '📍 Моё местоположение',
+    nearbyDefault:  'Места рядом',
+    radiusLabel:    'Радиус:',
+    empty: r => `В радиусе ${r} км от текущего центра карты не найдено объектов культурного наследия.`,
+    emptyInitial:   'Переместите карту или нажмите "📍 Моё местоположение", чтобы увидеть ближайшие объекты наследия.',
+    ttsLabel:       '🔊 Прослушать историю',
+    ttsNotSupported:'Ваш браузер не поддерживает синтез речи (Speech Synthesis).',
+    ttsNoText:      'Для этого места нет текста для чтения.',
+    priorityLabel:  'Приоритет:',
+    priorityNearest:'Ближайшие',
+    priorityTopScore:'Самые известные',
+    countLabel:     'Количество:',
+  },
+
+  // 🇮🇹 Italiano
+  it: {
+    appTitle:       'Scopri Parigi',
+    appSubtitle:    'Muoviti per scoprire i siti storici vicino a te.',
+    locate:         '📍 La mia posizione',
+    nearbyDefault:  'Luoghi vicini',
+    radiusLabel:    'Raggio:',
+    empty: r => `Nessun sito storico trovato entro ${r} km dal centro attuale della mappa.`,
+    emptyInitial:   'Sposta la mappa o fai clic su "📍 La mia posizione" per vedere i siti storici nelle vicinanze.',
+    ttsLabel:       '🔊 Ascolta la storia',
+    ttsNotSupported:'Il tuo browser non supporta la sintesi vocale (Speech Synthesis).',
+    ttsNoText:      'Nessun testo da leggere per questo luogo.',
+    priorityLabel:  'Priorità:',
+    priorityNearest:'Più vicini',
+    priorityTopScore:'Più famosi',
+    countLabel:     'Numero:',
+  },
+};
+
+  function closeAllPopups(exceptIdx = null) {
+    if (!markers || !markers.length) return;
+    markers.forEach(m => {
+      if (!m || typeof m.getPopup !== "function") return;
+      const p = m.getPopup();
+      if (p && p.isOpen() && m._poiIdx !== exceptIdx) {
+        p.remove();
+      }
+    });
+  }
+
+function getUiLangId() {
+  if (!currentLangConfig) return 'en';
+  const id = currentLangConfig.id;
+  // nếu có cấu hình i18n cho id thì dùng, không thì fallback English
+  return i18n[id] ? id : 'en';
+}
+
+
+  function getName(poi) {
+    const lang = getUiLangId();
+    if (lang === "vi") {
+      return poi.name_vn || poi.name_en || poi.name || "Không tên";
+    } else if (lang === "en") {
+      return poi.name_en || poi.name || poi.name_vn || "Unnamed";
+    } else {
+      return poi.name || poi.name_en || poi.name_vn || "Sans nom";
+    }
+  }
+
+  function getAddress(poi) {
+    const lang = getUiLangId();
+    if (lang === "vi") {
+      return poi.address_vn || poi.address_en || poi.address || "";
+    } else if (lang === "en") {
+      return poi.address_en || poi.address || poi.address_vn || "";
+    } else {
+      return poi.address || poi.address_en || poi.address_vn || "";
+    }
+  }
+
+  function getStory(poi) {
+    // Ưu tiên dùng field tương ứng với currentLangConfig.key
+    if (currentLangConfig && poi[currentLangConfig.key]) {
+      return poi[currentLangConfig.key];
+    }
+
+    // Fallback theo thứ tự ưu tiên: tiếng Anh -> tiếng Pháp gốc ->  tiếng Việt
+    if (poi.story_en) return poi.story_en;
+    if (poi.story)    return poi.story;
+    if (poi.story_vn) return poi.story_vn;
+
+    return "";
+  }
+
+
+  function loadVoices() {
+    voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+  }
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+  }
+
+  function getVoiceForLangCode(langCode) {
+    if (!voices || !voices.length) return null;
+    const prefix = langCode.split("-")[0].toLowerCase();
+    let v = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(prefix));
+    if (!v) v = voices[0];
+    return v;
+  }
+
+  function playPoiStory(index) {
+    const uiLang = getUiLangId();
+    const t = i18n[uiLang];
+
+    if (!("speechSynthesis" in window)) {
+      alert(t.ttsNotSupported);
+      return;
+    }
+
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+      window.speechSynthesis.cancel();
+      currentUtterance = null;
+      return;
+    }
+
+    const poi = pois[index];
+    if (!poi) return;
+    const text = getStory(poi);
+    if (!text) {
+      alert(t.ttsNoText);
+      return;
+    }
+
+    const langCode = currentLangConfig?.ttsLang || "en-US";
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = langCode;
+    const v = getVoiceForLangCode(langCode);
+    if (v) utter.voice = v;
+
+    currentUtterance = utter;
+    window.speechSynthesis.speak(utter);
+  }
+
+  window.playPoiStory = playPoiStory;
+
+  function distanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) *
+      Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  function highlightMarkerForPoiIdx(idx) {
+    highlightedPoiIdx = idx;
+    markers.forEach(m => {
+      if (!m._el) return;
+      if (m._poiIdx === idx) {
+        m._el.classList.add("highlighted");
+      } else {
+        m._el.classList.remove("highlighted");
+      }
+    });
+  }
+
+  function highlightPoiListItem(idx) {
+    const listItems = poiListEl.querySelectorAll('.poi-item');
+    listItems.forEach(li => {
+      const poiIdx = parseInt(li.getAttribute('data-poi-idx'));
+      if (poiIdx === idx) {
+        li.classList.add('active');
+        li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        li.classList.remove('active');
+      }
+    });
+  }
+
+  function createMarker(poi) {
+    const el = document.createElement("div");
+    el.className = "poi-marker";
+
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([poi.lon, poi.lat])
+      .addTo(map);
+
+    marker._el = el;
+    marker._poiIdx = poi._idx;
+
+    const popup = new maplibregl.Popup({ offset: 18, closeButton: false, closeOnClick: false });
+
+    function updatePopupContent() {
+      const title = getName(poi);
+      const addr = getAddress(poi);
+      const story = getStory(poi);
+      const uiLang = getUiLangId();
+      const t = i18n[uiLang];
+
+      const html = `
+        <div>
+          <div class="popup-title">${title}</div>
+          <div class="popup-address">${addr}</div>
+          <div class="popup-story">${story.slice(0, 260)}...</div>
+          <button class="popup-tts-btn" onclick="playPoiStory(${poi._idx})">
+            ${t.ttsLabel}
+          </button>
+        </div>
+      `;
+      popup.setHTML(html);
+    }
+
+    updatePopupContent();
+
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      highlightMarkerForPoiIdx(poi._idx);
+      highlightPoiListItem(poi._idx);
+      updatePopupContent();
+
+      // Web: luôn hiển thị popup
+      closeAllPopups(poi._idx);
+
+      if (!marker._popup || !marker._popup.isOpen()) {
+        marker.setPopup(popup);
+        popup.setLngLat([poi.lon, poi.lat]).addTo(map);
+      }
+    });
+
+    marker.setPopup(popup);
+    marker._updatePopupContent = updatePopupContent;
+
+    return marker;
+  }
+
+  function clearMarkers() {
+    markers.forEach(m => m.remove());
+    markers = [];
+  }
+
+  function updateUserMarker() {
+    if (!map || !userLocation) return;
+    if (userMarker) {
+      userMarker.setLngLat([userLocation.lon, userLocation.lat]);
+    } else {
+      const el = document.createElement("div");
+      el.className = "user-marker";
+      userMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([userLocation.lon, userLocation.lat])
+        .addTo(map);
+    }
+  }
+
+  function updateNearbyList() {
+    if (!map || !pois.length) return;
+    const center = map.getCenter();
+    const centerLat = center.lat;
+    const centerLon = center.lng;
+    const uiLang = getUiLangId();
+    const t = i18n[uiLang];
+
+    const valid = pois.filter(p => p.lat && p.lon);
+
+    let within = valid
+      .map(p => ({
+        ...p,
+        dist: distanceKm(centerLat, centerLon, p.lat, p.lon),
+      }))
+      .filter(p => p.dist <= currentRadiusKm);
+
+    let selected = [];
+
+    if (within.length === 0) {
+      selected = [];
+    } else if (currentPriority === "nearest") {
+      selected = within
+        .sort((a, b) => a.dist - b.dist)
+        .slice(0, currentMaxPoints);
+    } else {
+      selected = within
+        .sort((a, b) => {
+          const sa = typeof a.score === "number" ? a.score : -Infinity;
+          const sb = typeof b.score === "number" ? b.score : -Infinity;
+          return sb - sa;
+        });
+      if (selected.length > currentMaxPoints) {
+        selected = selected.slice(0, currentMaxPoints);
+      }
+    }
+
+    lastNearbyPois = selected;
+
+    clearMarkers();
+    selected.forEach(p => {
+      const m = createMarker(p);
+      markers.push(m);
+    });
+
+    highlightMarkerForPoiIdx(highlightedPoiIdx);
+    updateUserMarker();
+
+    poiListEl.innerHTML = "";
+
+    if (!selected.length) {
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = t.empty(currentRadiusKm);
+      poiListEl.appendChild(li);
+      nearbyTitleEl.textContent = t.nearbyDefault;
+      return;
+    }
+
+    nearbyTitleEl.textContent = t.nearbyDefault;
+
+    selected.forEach(poi => {
+      const li = document.createElement("li");
+      li.className = "poi-item";
+      li.setAttribute('data-poi-idx', poi._idx);
+
+      const title = getName(poi);
+      const addr = getAddress(poi);
+      const story = getStory(poi);
+
+      let scoreText = "";
+      if (typeof poi.score === "number") {
+        const rounded = Math.round(poi.score * 100) / 10;
+        scoreText = rounded.toFixed(1);
+      }
+
+      const imgSrc = poi.reference
+        ? `./images/${poi.reference.toLowerCase()}.jpg`
+        : "";
+
+      li.innerHTML = `
+        <div class="poi-content">
+          <img
+            class="poi-thumb"
+            src="${imgSrc}"
+            alt="${title}"
+            onerror="this.style.display='none';"
+          />
+          <div class="poi-main">
+            <div class="poi-top-row">
+              <div>
+                <div class="poi-title">${title}</div>
+                <div class="poi-address">${addr}</div>
+              </div>
+              ${scoreText
+                ? `<div class="poi-score">⭐ ${scoreText}/10</div>`
+                : ""
+              }
+            </div>
+            <div class="poi-story">${story}</div>
+            <button type="button"
+              class="tts-inline"
+              onclick="playPoiStory(${poi._idx})">
+              ${t.ttsLabel}
+            </button>
+          </div>
+        </div>
+      `;
+
+      if (poi._idx === highlightedPoiIdx) {
+        li.classList.add('active');
+      }
+
+      li.addEventListener("click", () => {
+        highlightPoiListItem(poi._idx);
+        highlightMarkerForPoiIdx(poi._idx);
+
+        const marker = markers.find(m => m._poiIdx === poi._idx);
+        if (marker) {
+          closeAllPopups(poi._idx);
+          const popup = marker.getPopup();
+          if (popup && !popup.isOpen()) {
+            popup.setLngLat([poi.lon, poi.lat]).addTo(map);
+          }
+        }
+
+        isProgrammaticMove = true;
+        map.flyTo({
+          center: [poi.lon, poi.lat],
+          zoom: 15,
+          essential: true
+        });
+      });
+
+      poiListEl.appendChild(li);
+    });
+  }
+
+  function fitToNearbyPois() {
+    if (!map || !lastNearbyPois || !lastNearbyPois.length) return;
+
+    if (lastNearbyPois.length === 1) {
+      const p = lastNearbyPois[0];
+      map.flyTo({
+        center: [p.lon, p.lat],
+        zoom: 16,
+        essential: true
+      });
+      return;
+    }
+
+    const bounds = new maplibregl.LngLatBounds();
+    lastNearbyPois.forEach(p => bounds.extend([p.lon, p.lat]));
+    if (userLocation) bounds.extend([userLocation.lon, userLocation.lat]);
+
+    map.fitBounds(bounds, { padding: 40 });
+  }
+
+  function initMap() {
+    const osmStyle = {
+      version: 8,
+      sources: {
+        "osm-tiles": {
+          type: "raster",
+          tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+          tileSize: 256,
+          attribution: ""
+        }
+      },
+      layers: [
+        {
+          id: "osm-tiles",
+          type: "raster",
+          source: "osm-tiles",
+          minzoom: 0,
+          maxzoom: 19
+        }
+      ]
+    };
+
+    map = new maplibregl.Map({
+      container: "map",
+      style: osmStyle,
+      center: [PARIS_CENTER.lon, PARIS_CENTER.lat],
+      zoom: 5
+    });
+
+    map.on("load", () => {
+      resetView();
+    });
+
+    map.on("moveend", () => {
+      if (isProgrammaticMove) {
+        isProgrammaticMove = false;
+        return;
+      }
+      updateNearbyList();
+    });
+
+    map.on("click", (e) => {
+      if (!e.originalEvent.target.closest('.maplibregl-marker')) {
+        highlightMarkerForPoiIdx(null);
+        highlightPoiListItem(null);
+        highlightedPoiIdx = null;
+      }
+    });
+  }
+
+  async function loadPois() {
+    try {
+      const res = await fetch("paris_story_multilanguage.json");
+      if (!res.ok) {
+        throw new Error("Không load được paris_story_multilanguage.json: " + res.status);
+      }
+      const raw = await res.json();
+      pois = raw.map((p, idx) => ({ ...p, _idx: idx }));
+    } catch (err) {
+      console.error(err);
+      alert("Không load được dữ liệu POI (paris_story_multilanguage.json). Hãy kiểm tra lại file và đường dẫn.");
+    }
+  }
+
+  function renderLanguageMenu() {
+    if (!availableLanguages.length) return;
+    langMenu.innerHTML = "";
+
+    availableLanguages.forEach(cfg => {
+      const btn = document.createElement("button");
+      btn.setAttribute("data-lang-id", cfg.id);
+      btn.innerHTML = `<span>${cfg.flag}</span><span>${cfg.label}</span>`;
+      langMenu.appendChild(btn);
+    });
+
+    langToggleBtn.textContent = currentLangConfig.flag || "🌐";
+  }
+
+  function applyLanguage() {
+    const uiLang = getUiLangId();
+    const t = i18n[uiLang];
+
+    appTitleEl.textContent    = t.appTitle;
+    appSubtitleEl.textContent = t.appSubtitle;
+    locateBtn.textContent     = t.locate;
+    radiusLabelEl.textContent = t.radiusLabel;
+    priorityLabelEl.textContent = t.priorityLabel;
+    countLabelEl.textContent  = t.countLabel;
+    nearbyTitleEl.textContent = t.nearbyDefault;
+
+    const nearestOpt = prioritySelect.querySelector('option[value="nearest"]');
+    const topOpt = prioritySelect.querySelector('option[value="topscore"]');
+    if (nearestOpt) nearestOpt.textContent = t.priorityNearest;
+    if (topOpt) topOpt.textContent = t.priorityTopScore;
+
+    if (currentLangConfig) {
+      langToggleBtn.textContent = currentLangConfig.flag || "🌐";
+    }
+
+    markers.forEach(m => m._updatePopupContent());
+    updateNearbyList();
+  }
+
+  function resetView() {
+    let center;
+
+    if (userLocation) {
+      const d = distanceKm(
+        userLocation.lat,
+        userLocation.lon,
+        PARIS_CENTER.lat,
+        PARIS_CENTER.lon
+      );
+      if (d <= 8) {
+        center = [userLocation.lon, userLocation.lat];
+      }
+    }
+
+    if (!center) {
+      center = [NOTRE_DAME.lon, NOTRE_DAME.lat];
+    }
+
+    map.jumpTo({
+      center,
+      zoom: 14
+    });
+
+    highlightMarkerForPoiIdx(null);
+    highlightPoiListItem(null);
+    highlightedPoiIdx = null;
+
+    updateNearbyList();
+    fitToNearbyPois();
+  }
+
+  function initControls() {
+    radiusSelect.addEventListener("change", () => {
+      currentRadiusKm = parseFloat(radiusSelect.value);
+      updateNearbyList();
+      fitToNearbyPois();
+    });
+
+    prioritySelect.addEventListener("change", () => {
+      currentPriority = prioritySelect.value || "nearest";
+      updateNearbyList();
+      fitToNearbyPois();
+    });
+
+    maxPointsSelect.addEventListener("change", () => {
+      currentMaxPoints = parseInt(maxPointsSelect.value, 10) || 10;
+      updateNearbyList();
+      fitToNearbyPois();
+    });
+
+    locateBtn.addEventListener("click", () => {
+      const uiLang = getUiLangId();
+      const t = i18n[uiLang];
+      if (!navigator.geolocation) {
+        alert("Trình duyệt không hỗ trợ định vị.");
+        return;
+      }
+      locateBtn.disabled = true;
+      locateBtn.textContent = t.locate.replace("📍", "⏳");
+
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const { latitude, longitude } = pos.coords;
+          userLocation = { lat: latitude, lon: longitude };
+          updateUserMarker();
+          map.flyTo({
+            center: [longitude, latitude],
+            zoom: 14,
+            essential: true
+          });
+          locateBtn.disabled = false;
+          locateBtn.textContent = t.locate;
+        },
+        err => {
+          console.error(err);
+          alert("Không lấy được vị trí của bạn.");
+          locateBtn.disabled = false;
+          locateBtn.textContent = t.locate;
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+
+    langToggleBtn.addEventListener("click", () => {
+      langMenu.classList.toggle("open");
+    });
+
+    langMenu.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-lang-id]");
+      if (!btn) return;
+      const id = btn.getAttribute("data-lang-id");
+      if (!id) return;
+      const cfg = availableLanguages.find(l => l.id === id);
+      if (!cfg || cfg === currentLangConfig) {
+        langMenu.classList.remove("open");
+        return;
+      }
+      currentLangConfig = cfg;
+      langMenu.classList.remove("open");
+      applyLanguage();
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!langMenu.contains(e.target) && !langToggleBtn.contains(e.target)) {
+        langMenu.classList.remove("open");
+      }
+    });
+  }
+
+  (async function main() {
+    await loadPois();
+    initMap();
+    initControls();
+    renderLanguageMenu();
+    applyLanguage();
+  })();
+</script>
+</body>
+</html>
