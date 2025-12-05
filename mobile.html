@@ -567,26 +567,30 @@ main {
     return languageConfigs.find(cfg => cfg.id === langParam) || languageConfigs[0];
   }
 
-document.documentElement.style.setProperty("--header-height",
-  document.querySelector("header").offsetHeight + "px"
-);
+  function updateLayoutVars() {
+    const header = document.querySelector('header');
+    if (header) {
+      document.documentElement.style.setProperty(
+        '--header-height',
+        header.offsetHeight + 'px'
+      );
+    }
 
-// 1. Sélectionner l'élément sidebar
-const sidebarElement = document.querySelector('.sidebar');
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      document.documentElement.style.setProperty(
+        '--sidebar-height',
+        sidebar.offsetHeight + 'px'
+      );
+    }
+  }
 
-if (sidebarElement) {
-  // 2. Obtenir sa hauteur visible avec offsetHeight
-  const sidebarHeight = sidebarElement.offsetHeight + "px";
+  // gọi một lần khi load xong DOM
+  updateLayoutVars();
 
-document.documentElement.style.setProperty("--sidebar-height",
-  sidebarHeight
-);
+  // cập nhật khi xoay màn hình / đổi size
+  window.addEventListener('resize', updateLayoutVars);
 
-  // Affiche le résultat dans la console du navigateur
-  console.log('Hauteur du sidebar :', sidebarHeight);
-} else {
-  console.log('Élément .sidebar non trouvé.');
-}
 
   let availableLanguages = languageConfigs.slice();
   let currentLangConfig = detectInitialLang();
@@ -1067,10 +1071,14 @@ document.documentElement.style.setProperty("--sidebar-height",
 
     if (!selected.length) {
       nearbyTitleEl.textContent = t.empty(currentRadiusKm);
+      // 🔹 Message dài 2 dòng -> sidebar cao hơn -> đo lại
+      updateLayoutVars();
       return;
     }
 
     nearbyTitleEl.textContent = t.nearbyDefault;
+    // 🔹 Khi quay lại trạng thái “Nearby places” (ít chữ hơn) cũng đo lại
+    updateLayoutVars();
   }
 
   function fitToNearbyPois() {
@@ -1200,6 +1208,9 @@ document.documentElement.style.setProperty("--sidebar-height",
     if (selectedPoiIdx !== null) {
       showPoiDetail(selectedPoiIdx, { skipMove: true });
     }
+
+    // 🔹 đo lại sau khi text header/subtitle đổi
+    updateLayoutVars();
   }
 
   function resetView() {
