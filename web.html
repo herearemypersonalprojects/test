@@ -1248,11 +1248,10 @@ function getUiLangId() {
       li.className = "empty";
       li.textContent = t.empty(currentRadiusKm);
       poiListEl.appendChild(li);
-      nearbyTitleEl.textContent = t.nearbyDefault;
+      updateNearbyTitle(0);
       return;
     }
-
-    nearbyTitleEl.textContent = t.nearbyDefault;
+    updateNearbyTitle(selected.length);
 
     selected.forEach(poi => {
       const li = document.createElement("li");
@@ -1439,7 +1438,7 @@ function getUiLangId() {
     radiusLabelEl.textContent = t.radiusLabel;
     priorityLabelEl.textContent = t.priorityLabel;
     countLabelEl.textContent  = t.countLabel;
-    nearbyTitleEl.textContent = t.nearbyDefault;
+    updateNearbyTitle(lastNearbyPois.length || 0);
 
     const nearestOpt = prioritySelect.querySelector('option[value="nearest"]');
     const topOpt = prioritySelect.querySelector('option[value="topscore"]');
@@ -1565,6 +1564,20 @@ function getUiLangId() {
       }
     });
   }
+
+function updateNearbyTitle(count) {
+  const uiLang = getUiLangId();
+  const t = i18n[uiLang];
+
+  if (!count || count <= 0) {
+      // No POIs → just show the plain label
+      nearbyTitleEl.textContent = t.nearbyDefault;
+    } else {
+      // Show count + label, e.g. "10 Nearby places"
+      nearbyTitleEl.textContent = `${count} ${t.nearbyDefault}`;
+    }
+  }
+
 
   (async function main() {
     await loadPois();
