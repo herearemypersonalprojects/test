@@ -689,6 +689,10 @@
   let lastNearbyPois = [];
   let highlightedPoiIdx = null;
 
+  let isFullPoisLoaded = false;   // đã load xong bản full chưa?
+  let poisByRef = {};             // dùng để merge nhanh theo reference
+
+
   const locateBtn       = document.getElementById("locate-btn");
   const radiusSelect    = document.getElementById("radius");
   const poiListEl       = document.getElementById("poi-list");
@@ -1423,19 +1427,168 @@ function getUiLangId() {
     });
   }
 
-  async function loadPois() {
+  // --- CACHE SETTINGS ---
+  const POIS_CACHE_KEY = 'lozu_pois_cache_v1';   // đổi version nếu đổi format
+  const CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24;  // 24 giờ
+
+  function saveFullPoisToCache(rawFull) {
     try {
-      const res = await fetch("paris_story_multilanguage.json");
-      if (!res.ok) {
-        throw new Error("Không load được paris_story_multilanguage.json: " + res.status);
-      }
-      const raw = await res.json();
-      pois = raw.map((p, idx) => ({ ...p, _idx: idx }));
-    } catch (err) {
-      console.error(err);
-      alert("Không load được dữ liệu POI (paris_story_multilanguage.json). Hãy kiểm tra lại file và đường dẫn.");
+      const payload = {
+        ts: Date.now(),
+        data: rawFull
+      };
+      localStorage.setItem(POIS_CACHE_KEY, JSON.stringify(payload));
+      console.log('✅ Saved POIs to localStorage:', rawFull.length);
+    } catch (e) {
+      console.warn('⚠️ Cannot save POIs cache:', e);
     }
   }
+
+  function loadFullPoisFromCache() {
+    try {
+      const txt = localStorage.getItem(POIS_CACHE_KEY);
+      if (!txt) return null;
+
+      const payload = JSON.parse(txt);
+      if (!payload || !Array.isArray(payload.data)) return null;
+
+      const age = Date.now() - (payload.ts || 0);
+      if (age > CACHE_MAX_AGE_MS) {
+        console.log('ℹ️ POIs cache expired, ignore');
+        return null;
+      }
+
+      console.log('✅ Loaded POIs from localStorage:', payload.data.length);
+      return payload.data;
+    } catch (e) {
+      console.warn('⚠️ Cannot read POIs cache:', e);
+      return null;
+    }
+  }
+
+
+  async function loadPois() {
+    // 0️⃣ Thử lấy full POIs từ localStorage trước
+    const cachedFull = loadFullPoisFromCache();
+    if (cachedFull) {
+      // Xây lại poisByRef từ cache
+      poisByRef = {};
+      cachedFull.forEach(p => {
+        if (p.reference) {
+          poisByRef[p.reference] = { ...p };
+        }
+      });
+
+      // Gán pois + _idx
+      pois = Object.values(poisByRef).map((p, idx) => ({
+        ...p,
+        _idx: idx
+      }));
+
+      isFullPoisLoaded = true;
+
+      console.log('🚀 Using cached full POIs immediately');
+
+      if (map) {
+        updateNearbyList();
+        fitToNearbyPois();
+      }
+
+      // 🚿 Tuỳ chọn: vẫn refresh background từ server để dữ liệu mới hơn
+      loadFullPoisInBackground();
+      return;
+    }
+
+    // 1️⃣ Không có cache → dùng chiến lược core + background như trước
+    try {
+      // 1.1. Load nhanh bản core (≈100 POIs)
+      const resCore = await fetch("paris_core.json");
+      if (!resCore.ok) {
+        throw new Error("Không load được paris_core.json: " + resCore.status);
+      }
+
+      const rawCore = await resCore.json();
+
+      // Gán _idx tạm thời cho core
+      pois = rawCore.map((p, idx) => ({ ...p, _idx: idx }));
+
+      // Build map reference -> POI (tạm)
+      poisByRef = {};
+      pois.forEach(p => {
+        if (p.reference) {
+          poisByRef[p.reference] = p;
+        }
+      });
+
+      console.log("Core POIs loaded:", pois.length);
+
+      if (map) {
+        updateNearbyList();
+        fitToNearbyPois();
+      }
+
+      // 1.2. Load bản full ở background
+      loadFullPoisInBackground();
+    } catch (err) {
+      console.error(err);
+      alert("Không load được dữ liệu POI ban đầu (paris_core.json). Hãy kiểm tra lại file và đường dẫn.");
+    }
+  }
+
+
+  async function loadFullPoisInBackground() {
+    try {
+      console.log('⏳ Loading full POIs in background...');
+      const resFull = await fetch("paris_story_multilanguage.json");
+      if (!resFull.ok) {
+        throw new Error("Không load được paris_story_multilanguage.json: " + resFull.status);
+      }
+
+      const rawFull = await resFull.json();
+
+      // Lưu full raw vào cache
+      saveFullPoisToCache(rawFull);
+
+      // Duyệt full, merge vào poisByRef
+      rawFull.forEach(p => {
+        const ref = p.reference;
+        if (!ref) return;
+
+        if (poisByRef[ref]) {
+          // 🔁 Đã có trong core → cập nhật fields mới
+          poisByRef[ref] = {
+            ...poisByRef[ref],
+            ...p
+          };
+        } else {
+          // ➕ Chưa có trong core → thêm mới
+          poisByRef[ref] = { ...p };
+        }
+      });
+
+      // Chuyển lại về mảng pois, gán _idx mới
+      const mergedList = Object.values(poisByRef).map((p, idx) => ({
+        ...p,
+        _idx: idx
+      }));
+
+      pois = mergedList;
+      isFullPoisLoaded = true;
+
+      console.log("✅ Full POIs loaded & merged:", pois.length);
+
+      // Sau khi merge xong, cập nhật lại nearby
+      if (map) {
+        updateNearbyList();
+        // Không fitToNearbyPois để tránh map nhảy khi user đang xem
+      }
+    } catch (err) {
+      console.error("Lỗi load full POIs:", err);
+      // Không alert để tránh làm phiền user
+    }
+  }
+
+
 
   function renderLanguageMenu() {
     if (!availableLanguages.length) return;
@@ -1603,12 +1756,19 @@ function updateNearbyTitle(count) {
 
 
   (async function main() {
-    await loadPois();
+    // 1️⃣ Init map & controls trước
     initMap();
     initControls();
     renderLanguageMenu();
+
+    // 2️⃣ Load POIs (tự xử lý: cache → core → full)
+    await loadPois();
+
+    // 3️⃣ Áp ngôn ngữ (sẽ gọi updateNearbyList 1 lần nữa)
     applyLanguage();
   })();
+
+
 </script>
 </body>
 </html>
