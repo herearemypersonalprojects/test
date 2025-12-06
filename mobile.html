@@ -110,12 +110,24 @@
     :root {
       /* khoảng cách an toàn phía trên cho iPhone có tai thỏ */
       --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
     :root {
       --header-height: 60px;
       --sidebar-height: 200px;
     }
+
+    :root {
+      --vh-full: 100vh;
+    }
+
+    @supports (height: 100dvh) {
+      :root {
+        --vh-full: 100dvh;
+      }
+    }
+
 
 body {
   font-family:
@@ -287,13 +299,13 @@ main {
       background: #1565c0;
     }
 
-.map-sidebar-wrapper {
-  display: flex;
-  flex-direction: column;
-    flex: 1 1 auto;
-  min-height: 0;
-  height: calc(100vh - var(--header-height)); /* tổng phần dưới */
-}
+    .map-sidebar-wrapper {
+      display: flex;
+      flex-direction: column;
+        flex: 1 1 auto;
+      min-height: 0;
+      height: calc(var(--vh-full) - var(--header-height)); /* tổng phần dưới */
+    }
 
 
 #map {
@@ -301,14 +313,23 @@ main {
 }
 .my-element {
   /* Fallback cho trình duyệt không hỗ trợ dvh */
-  height: calc(100vh - var(--header-height) - var(--sidebar-height) );
+  height: calc(100dvh - var(--header-height) - var(--sidebar-height) );
 }
 
-@supports (height: 100dvh) {
-  .my-element {
-    height: calc(100dvh - var(--header-height) - var(--sidebar-height) );
-  }
-}
+/* Modern browsers: override with dvh */
+    @supports (height: 100dvh) {
+      .map-sidebar-wrapper {
+        height: calc(100dvh - var(--header-height));
+      }
+
+      #map {
+        height: calc(100dvh - var(--header-height) - var(--sidebar-height));
+      }
+
+      #poi-detail {
+        height: calc(var(--vh-full) - var(--header-height) - 50vh);
+      }
+    }
 
 
     /* Khi có panel chi tiết: nửa trên */
@@ -396,23 +417,37 @@ main {
     }
 
     /* PANEL CHI TIẾT Ở NỬA DƯỚI */
-#poi-detail {
-  display: none;
-  background: #ffffff;
-  border-top: 2px solid #64b5f6;
-  padding: 10px 12px;
-  box-shadow: 0 -3px 8px rgba(0,0,0,0.15);
-  flex-shrink: 0;
+    #poi-detail {
+      display: none;
+      background: #ffffff;
+      border-top: 2px solid #64b5f6;
+      padding: 10px 12px calc(16px + var(--safe-bottom));
+      box-shadow: 0 -3px 8px rgba(0,0,0,0.15);
+      flex-shrink: 0;
 
-  /* chiều cao khít 100% màn hình */
-  height: calc(100vh - var(--header-height) - 50vh);
-  overflow-y: auto;
-}
+      /* chiều cao khít 100% màn hình */
+      height: calc(100vh - var(--header-height) - 50vh);
+      overflow-y: auto;
+    }
 
-
+    /* dùng dynamic viewport height trên mobile hiện đại để tránh lỗi 100vh */
+    @supports (height: 100dvh) {
+      #poi-detail {
+        height: calc(100dvh - var(--header-height) - 50vh);
+      }
+    }
     body.has-detail #poi-detail {
       display: block;
     }
+
+    .poi-detail-story {
+      font-size: 0.8rem;
+      color: #263238;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      padding-bottom: 8px; /* optional, just to give breathing space */
+    }
+
 
     .poi-detail-img-wrapper {
       width: 100%;
