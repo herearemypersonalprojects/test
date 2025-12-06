@@ -635,6 +635,10 @@
 
   let isProgrammaticMove = false;
 
+  // ✅ NEW: last center used for nearby calculation
+  let lastCenterForNearby = null;
+
+
   // LUÔN coi đây là bản Web
   function isMobile() {
     return false;
@@ -1198,6 +1202,11 @@ function getUiLangId() {
     const center = map.getCenter();
     const centerLat = center.lat;
     const centerLon = center.lng;
+
+
+    // ✅ remember the center used for this computation
+    lastCenterForNearby = { lat: centerLat, lon: centerLon };
+
     const uiLang = getUiLangId();
     const t = i18n[uiLang];
 
@@ -1388,6 +1397,20 @@ function getUiLangId() {
         isProgrammaticMove = false;
         return;
       }
+
+        // ✅ NEW: ignore zoom-only changes (center practically unchanged)
+      const newCenter = map.getCenter();
+      if (lastCenterForNearby) {
+        const d = distanceKm(
+          newCenter.lat, newCenter.lng,
+          lastCenterForNearby.lat, lastCenterForNearby.lon
+        );
+        // ~0.003 km = 3 meter → treat as “same center”
+        if (d < 0.003) {
+          return;
+        }
+      }
+
       updateNearbyList();
     });
 
@@ -1463,7 +1486,7 @@ function getUiLangId() {
         PARIS_CENTER.lat,
         PARIS_CENTER.lon
       );
-      if (d <= 8) {
+      if (d <= 8) {  // If userLocation is known and within 8 km of PARIS_CENTER → center is user location.
         center = [userLocation.lon, userLocation.lat];
       }
     }

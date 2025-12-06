@@ -638,6 +638,9 @@ main {
   let currentPriority = "topscore";
   let isProgrammaticMove = false;
 
+  // ✅ NEW: last center used for nearby calculation
+  let lastCenterForNearby = null;
+
   const languageConfigs = [
     { id: "en", key: "story_en",         flag: "🇬🇧", label: "English",       ttsLang: "en-US" },
     { id: "fr", key: "story",            flag: "🇫🇷", label: "Français",      ttsLang: "fr-FR" },
@@ -1123,6 +1126,10 @@ main {
     const center = map.getCenter();
     const centerLat = center.lat;
     const centerLon = center.lng;
+
+    // ✅ remember the center used for this computation
+    lastCenterForNearby = { lat: centerLat, lon: centerLon };
+
     const uiLang = getUiLangId();
     const t = i18n[uiLang];
 
@@ -1237,6 +1244,19 @@ main {
       if (isProgrammaticMove) {
         isProgrammaticMove = false;
         return;
+      }
+
+      // ✅ NEW: ignore zoom-only changes (center practically unchanged)
+      const newCenter = map.getCenter();
+      if (lastCenterForNearby) {
+        const d = distanceKm(
+          newCenter.lat, newCenter.lng,
+          lastCenterForNearby.lat, lastCenterForNearby.lon
+        );
+        // ~0.003 km = 3 meter → treat as “same center”
+        if (d < 0.003) {
+          return;
+        }
       }
 
       // Trước khi updateNearbyList, ghi nhớ trạng thái detail + POI đang chọn
