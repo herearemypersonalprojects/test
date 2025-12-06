@@ -4,6 +4,55 @@
   <meta charset="UTF-8" />
   <title>Lozu – Paris Discovery</title>
 
+  <!-- SEO META -->
+  <!-- Default description (Google dùng cái này) -->
+  <meta name="description"
+        content="Khám phá các địa điểm văn hoá, di tích và câu chuyện thú vị quanh bạn tại Paris. Lozu – trải nghiệm bản đồ thông minh cho du lịch và khám phá di sản." />
+
+  <!-- Optional đa ngôn ngữ (cho plugin / future i18n) -->
+  <meta name="description:en"
+        content="Discover cultural heritage sites, stories, and remarkable places around you in Paris. Lozu offers a smart and intuitive map experience for explorers." />
+  <meta name="description:fr"
+        content="Découvrez les sites patrimoniaux, les lieux culturels et leurs histoires fascinantes autour de vous à Paris. Lozu propose une carte intelligente pour explorer la ville autrement." />
+
+  <meta name="keywords"
+        content="Lozu, Paris Discovery, heritage map, Paris tourism, bản đồ Paris, du lịch Paris, di sản Pháp, smart tourism" />
+
+  <!-- Canonical & hreflang -->
+  <link rel="canonical" href="https://lozu.fr/" />
+  <link rel="alternate" hreflang="x-default" href="https://lozu.fr/" />
+  <link rel="alternate" hreflang="vi" href="https://lozu.fr/?lang=vi" />
+  <link rel="alternate" hreflang="en" href="https://lozu.fr/?lang=en" />
+  <link rel="alternate" hreflang="fr" href="https://lozu.fr/?lang=fr" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Lozu – Paris Discovery" />
+  <meta property="og:description"
+        content="Khám phá di sản và các địa điểm thú vị quanh bạn tại Paris. Bản đồ thông minh cho người yêu du lịch và văn hoá." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://lozu.fr" />
+  <meta property="og:image" content="https://lozu.fr/icons/castle_logo_512.png" />
+  <meta property="og:site_name" content="Lozu – Paris Discovery" />
+  <meta property="og:locale" content="vi_VN" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:locale:alternate" content="fr_FR" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Lozu – Paris Discovery" />
+  <meta name="twitter:description"
+        content="Discover heritage sites and fascinating stories around you in Paris with Lozu smart map." />
+  <meta name="twitter:image" content="https://lozu.fr/icons/castle_logo_512.png" />
+  <meta name="twitter:url" content="https://lozu.fr" />
+
+  <!-- Viewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- favicon -->
+  <link rel="icon" type="image/svg+xml" href="/icons/castle_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/castle_logo_16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/castle_logo_32.png">
+
   <!-- Google Analytics / GA dùng chung -->
   <script src="ga-lozu.js"></script>
   <script>
@@ -17,12 +66,24 @@
     });
   </script>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- favicon -->
-  <link rel="icon" type="image/svg+xml" href="/icons/castle_favicon.ico">
-  <link rel="icon" type="image/png" sizes="16x16" href="/icons/castle_logo_16.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/icons/castle_logo_32.png">
+  <!-- JSON-LD structured data -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Lozu – Paris Discovery",
+      "url": "https://lozu.fr/",
+      "description": "Khám phá địa điểm văn hoá và di sản quanh bạn tại Paris với bản đồ thông minh Lozu.",
+      "applicationCategory": "TravelApplication",
+      "operatingSystem": "All",
+      "inLanguage": ["vi", "en", "fr"],
+      "creator": {
+        "@type": "Organization",
+        "name": "Lozu",
+        "url": "https://lozu.fr/"
+      }
+    }
+  </script>
 
   <style>
     * {
