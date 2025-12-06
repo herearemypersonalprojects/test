@@ -376,6 +376,52 @@ main {
       gap: 8px;
     }
 
+    /* Wrapper around marker + label */
+    .poi-marker-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Label above marker – hidden by default */
+/* Label above marker – nền tím, chữ vàng sáng chói, viền trắng */
+.poi-marker-label {
+  background: #7e57c2;                 /* 💜 nền tím */
+  color: #ffe66d;                      /* ⭐ vàng sáng chói, dễ đọc hơn */
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  max-width: 180px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+  pointer-events: none;
+
+  border: 2px solid #ffffff;           /* viền trắng */
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+
+  /* 🌟 chữ sáng rõ hơn nhờ shadow */
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 0.9),
+    0 0 6px rgba(0, 0, 0, 0.8);
+
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+/* Khi chọn POI → hiện label */
+.poi-marker-wrapper.show-label .poi-marker-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+
     .sidebar-header-top span {
       font-weight: 700;
       color: #0d47a1;
@@ -539,7 +585,7 @@ main {
     }
 
     .poi-marker.highlighted {
-      transform: scale(1.8);
+      transform: scale(1.3);
       background: #7e57c2;                 /* 💜 tím nổi bật */
       border-color: #ede7f6;               /* viền tím rất nhạt */
       box-shadow: 0 0 20px rgba(126,87,194,0.9);
@@ -1072,36 +1118,63 @@ main {
 
   function highlightMarkerForPoiIdx(idx) {
     highlightedPoiIdx = idx;
+
     markers.forEach(m => {
       if (!m._el) return;
+
+      const wrapper = m._el;
+      const iconEl  = wrapper.querySelector(".poi-marker");
+
       if (m._poiIdx === idx) {
-        m._el.classList.add("highlighted");
+        // Marker này đang được chọn
+        wrapper.classList.add("show-label");
+        if (iconEl) iconEl.classList.add("highlighted");
       } else {
-        m._el.classList.remove("highlighted");
+        wrapper.classList.remove("show-label");
+        if (iconEl) iconEl.classList.remove("highlighted");
       }
     });
   }
 
-  function createMarker(poi) {
-    const el = document.createElement("div");
-    el.className = "poi-marker";
 
-    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+  function createMarker(poi) {
+    // Wrapper chứa label + icon
+    const wrapper = document.createElement("div");
+    wrapper.className = "poi-marker-wrapper";
+
+    // Label (tên POI) – sẽ chỉ hiện khi chọn
+    const label = document.createElement("div");
+    label.className = "poi-marker-label";
+    label.textContent = getName(poi);
+
+    // Icon tròn như trước
+    const icon = document.createElement("div");
+    icon.className = "poi-marker";
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(icon);
+
+    const marker = new maplibregl.Marker({
+      element: wrapper,
+      anchor: "bottom"  // để label nằm ngay trên marker
+    })
       .setLngLat([poi.lon, poi.lat])
       .addTo(map);
 
-    marker._el = el;
+    // Lưu reference để highlight về sau
+    marker._el = wrapper;    // wrapper
     marker._poiIdx = poi._idx;
 
-    el.addEventListener("click", (e) => {
+    // Click vào marker (hoặc label) → show detail + GA
+    wrapper.addEventListener("click", (e) => {
       e.stopPropagation();
-      onPoiClick(poi);          // 👈 log GA
-
-      showPoiDetail(poi._idx);
+      onPoiClick(poi);          // log GA
+      showPoiDetail(poi._idx);  // sẽ gọi highlightMarkerForPoiIdx
     });
 
     return marker;
   }
+
 
   function clearMarkers() {
     markers.forEach(m => m.remove());
