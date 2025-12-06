@@ -1317,7 +1317,7 @@ main {
     radiusLabelEl.textContent = t.radiusLabel;
     priorityLabelEl.textContent = t.priorityLabel;
     countLabelEl.textContent  = t.countLabel;
-    pdateNearbyTitle(lastNearbyPois.length || 0);
+    updateNearbyTitle(lastNearbyPois.length || 0);
 
     const nearestOpt = prioritySelect.querySelector('option[value="nearest"]');
     const topOpt = prioritySelect.querySelector('option[value="topscore"]');
