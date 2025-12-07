@@ -2,7 +2,6 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <title>Paris Discovery – Mobile</title>
   <title>Paris Discovery by Lozu – Nearby Places & Heritage Map (Mobile)</title>
 
   <meta property="og:image" content="https://lozu.fr/icons/preview.png" />
@@ -107,20 +106,14 @@
       margin: 0;
       padding: 0;
     }
-    :root {
-      /* khoảng cách an toàn phía trên cho iPhone có tai thỏ */
+     :root {
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
-    }
-
-    :root {
       --header-height: 60px;
       --sidebar-height: 200px;
-    }
-
-    :root {
       --vh-full: 100vh;
     }
+
 
     @supports (height: 100dvh) {
       :root {
@@ -309,10 +302,6 @@ main {
 
 
 #map {
-  height: calc(100dvh - var(--header-height) - var(--sidebar-height) );
-}
-.my-element {
-  /* Fallback cho trình duyệt không hỗ trợ dvh */
   height: calc(100dvh - var(--header-height) - var(--sidebar-height) );
 }
 
@@ -541,13 +530,6 @@ main {
       align-items: center;
       gap: 4px;
       cursor: pointer;
-    }
-
-    .poi-detail-story {
-      font-size: 0.8rem;
-      color: #263238;
-      line-height: 1.4;
-      white-space: pre-wrap;
     }
 
     .poi-detail-note {
@@ -1105,19 +1087,19 @@ main {
 
   window.playPoiStory = playPoiStory;
 
-  function distanceKm(lat1, lon1, lat2, lon2) {
+  function distanceKm(lat1, lon1, lat2, lon2, cosLat1 = null) {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
+    const cos1 = cosLat1 !== null ? cosLat1 : Math.cos(lat1 * Math.PI / 180);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) *
-      Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+      cos1 * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
+
 
   function highlightMarkerForPoiIdx(idx) {
     highlightedPoiIdx = idx;
@@ -1211,10 +1193,11 @@ main {
 
     const valid = pois.filter(p => p.lat && p.lon);
 
+    const cosLatCenter = Math.cos(centerLat * Math.PI / 180);
     let within = valid
       .map(p => ({
         ...p,
-        dist: distanceKm(centerLat, centerLon, p.lat, p.lon),
+        dist: distanceKm(centerLat, centerLon, p.lat, p.lon, cosLatCenter),
       }))
       .filter(p => p.dist <= currentRadiusKm);
 
@@ -1375,78 +1358,7 @@ main {
     });
   }
 
-  // --- CACHE SETTINGS ---
-  const POIS_CACHE_KEY = 'lozu_pois_cache_v1';   // đổi version nếu đổi format
-  const CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24;  // 24 giờ
-
-  function saveFullPoisToCache(rawFull) {
-    try {
-      const payload = {
-        ts: Date.now(),
-        data: rawFull
-      };
-      localStorage.setItem(POIS_CACHE_KEY, JSON.stringify(payload));
-      console.log('✅ Saved POIs to localStorage:', rawFull.length);
-    } catch (e) {
-      console.warn('⚠️ Cannot save POIs cache:', e);
-    }
-  }
-
-  function loadFullPoisFromCache() {
-    try {
-      const txt = localStorage.getItem(POIS_CACHE_KEY);
-      if (!txt) return null;
-
-      const payload = JSON.parse(txt);
-      if (!payload || !Array.isArray(payload.data)) return null;
-
-      const age = Date.now() - (payload.ts || 0);
-      if (age > CACHE_MAX_AGE_MS) {
-        console.log('ℹ️ POIs cache expired, ignore');
-        return null;
-      }
-
-      console.log('✅ Loaded POIs from localStorage:', payload.data.length);
-      return payload.data;
-    } catch (e) {
-      console.warn('⚠️ Cannot read POIs cache:', e);
-      return null;
-    }
-  }
-
-
   async function loadPois() {
-    // 0️⃣ Thử lấy full POIs từ localStorage trước
-    const cachedFull = loadFullPoisFromCache();
-    if (cachedFull) {
-      // Xây lại poisByRef từ cache
-      poisByRef = {};
-      cachedFull.forEach(p => {
-        if (p.reference) {
-          poisByRef[p.reference] = { ...p };
-        }
-      });
-
-      // Gán pois + _idx
-      pois = Object.values(poisByRef).map((p, idx) => ({
-        ...p,
-        _idx: idx
-      }));
-
-      isFullPoisLoaded = true;
-
-      console.log('🚀 Using cached full POIs immediately');
-
-      if (map) {
-        updateNearbyList();
-        fitToNearbyPois();
-      }
-
-      // 🚿 Tuỳ chọn: vẫn refresh background từ server để dữ liệu mới hơn
-      loadFullPoisInBackground();
-      return;
-    }
-
     // 1️⃣ Không có cache → dùng chiến lược core + background như trước
     try {
       // 1.1. Load nhanh bản core (≈100 POIs)
@@ -1492,9 +1404,6 @@ main {
       }
 
       const rawFull = await resFull.json();
-
-      // Lưu full raw vào cache
-      saveFullPoisToCache(rawFull);
 
       // Duyệt full, merge vào poisByRef
       rawFull.forEach(p => {
@@ -1785,17 +1694,16 @@ main {
 
 
   (async function main() {
-    // 1️⃣ Init map & controls trước
+    // 1️⃣ Init map & UI càng sớm càng tốt
     initMap();
     initControls();
     renderLanguageMenu();
+    applyLanguage();   // sẽ hiển thị text, nút… ngay cả khi chưa có POI
 
-    // 2️⃣ Load POIs (tự xử lý: cache → core → full)
-    await loadPois();
-
-    // 3️⃣ Áp ngôn ngữ (sẽ gọi updateNearbyList 1 lần nữa)
-    applyLanguage();
+    // 2️⃣ Load POIs ngầm
+    loadPois();        // KHÔNG await
   })();
+
 
 
 </script>
