@@ -650,6 +650,97 @@
 
   let isProgrammaticMove = false;
 
+  let forcedPoiRefLower = null; // ✅ force include this POI in nearby selection
+
+  // ===============================
+  // Deep-link + URL sync (WEB)
+  // ===============================
+  const urlParams = new URLSearchParams(window.location.search);
+  const deepLinkRef = (urlParams.get("id") || "").trim().toLowerCase();
+  let deepLinkDone = false;
+
+  function getCurrentLangIdForUrl() {
+    return (currentLangConfig?.id || "en").toLowerCase();
+  }
+
+  function updateUrlLangOnly() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", getCurrentLangIdForUrl());
+    history.replaceState({}, "", url.toString());
+  }
+
+  function updateUrlWithPoi(poi) {
+    if (!poi || !poi.reference) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("id", poi.reference);
+    url.searchParams.set("lang", getCurrentLangIdForUrl());
+    history.replaceState({}, "", url.toString());
+  }
+
+  function clearPoiFromUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("id");
+    url.searchParams.set("lang", getCurrentLangIdForUrl());
+    history.replaceState({}, "", url.toString());
+  }
+
+  function findPoiIdxByRef(refLower) {
+    if (!refLower) return null;
+    for (let i = 0; i < pois.length; i++) {
+      const r = (pois[i]?.reference || "").toLowerCase();
+      if (r === refLower) return i;
+    }
+    return null;
+  }
+
+  // Ouvre le POI comme un clic (marker + liste + popup)
+  function openPoiFromDeepLink() {
+    if (!deepLinkRef || deepLinkDone) return;
+    if (!map || !pois || !pois.length) return;
+
+    // ✅ If map isn't fully loaded yet, retry once on load
+    if (typeof map.loaded === "function" && !map.loaded()) {
+      map.once("load", openPoiFromDeepLink);
+      return;
+    }
+
+    const idx = findPoiIdxByRef(deepLinkRef);
+    if (idx === null) return; // POI not in current dataset yet
+
+    const poi = pois[idx];
+    if (!poi || !poi.lat || !poi.lon) return;
+
+    deepLinkDone = true;
+
+    // Center on POI first
+    isProgrammaticMove = true;
+    map.jumpTo({
+      center: [poi.lon, poi.lat],
+      zoom: Math.max(map.getZoom(), 15)
+    });
+
+    // Force this POI into selection, then build markers/list
+    forcedPoiRefLower = deepLinkRef;
+    updateNearbyList();
+    forcedPoiRefLower = null;
+
+    // Open popup explicitly (no fake click)
+    const marker = markers.find(m => m._poiIdx === poi._idx);
+    if (marker) {
+      closeAllPopups(poi._idx);
+      if (marker._updatePopupContent) marker._updatePopupContent();
+      const popup = marker.getPopup();
+      if (popup) popup.setLngLat([poi.lon, poi.lat]).addTo(map);
+
+      highlightMarkerForPoiIdx(poi._idx);
+      highlightPoiListItem(poi._idx);
+    }
+
+    updateUrlWithPoi(poi);
+  }
+
+
+
   // ✅ NEW: last center used for nearby calculation
   let lastCenterForNearby = null;
 
@@ -1179,6 +1270,9 @@ function getUiLangId() {
     el.addEventListener("click", (e) => {
       e.stopPropagation();
       onPoiClick(poi);          // 👈 log GA
+
+      updateUrlWithPoi(poi); // ✅ NEW: URL partageable
+
       highlightMarkerForPoiIdx(poi._idx);
       highlightPoiListItem(poi._idx);
       updatePopupContent();
@@ -1259,6 +1353,20 @@ function getUiLangId() {
       }
     }
 
+    // ✅ Force include a POI (deep-link) even if "topscore" would exclude it
+    if (forcedPoiRefLower) {
+      const forced = valid.find(p => ((p.reference || "").toLowerCase() === forcedPoiRefLower));
+      if (forced) {
+        const already = selected.some(x => x._idx === forced._idx);
+        if (!already) {
+          selected.unshift(forced);                 // ensure it exists => marker will be created
+          if (selected.length > currentMaxPoints) { // keep list length stable
+            selected.pop();
+          }
+        }
+      }
+    }
+
     lastNearbyPois = selected;
 
     clearMarkers();
@@ -1335,6 +1443,8 @@ function getUiLangId() {
       }
 
       li.addEventListener("click", () => {
+        updateUrlWithPoi(poi); // ✅ NEW
+
         highlightPoiListItem(poi._idx);
         highlightMarkerForPoiIdx(poi._idx);
 
@@ -1409,6 +1519,10 @@ function getUiLangId() {
     });
 
     map.on("load", () => {
+      if (deepLinkRef) {
+        // on laisse openPoiFromDeepLink() agir dès que les POIs sont chargés
+        return;
+      }
       resetView();
     });
 
@@ -1439,6 +1553,8 @@ function getUiLangId() {
         highlightMarkerForPoiIdx(null);
         highlightPoiListItem(null);
         highlightedPoiIdx = null;
+
+        clearPoiFromUrl(); // ✅ NEW (optionnel mais recommandé)
       }
     });
   }
@@ -1466,15 +1582,20 @@ function getUiLangId() {
         }
       });
 
-      console.log("Core POIs loaded:", pois.length);
+    console.log("Core POIs loaded:", pois.length);
 
-      if (map) {
+    if (map) {
+      if (deepLinkRef) {
+        openPoiFromDeepLink();     // ✅ this will build nearby + open popup
+      } else {
         updateNearbyList();
         fitToNearbyPois();
       }
+    }
 
-      // 1.2. Load bản full ở background
-      loadFullPoisInBackground();
+    // 1.2. Load full in background
+    loadFullPoisInBackground();
+
     } catch (err) {
       console.error(err);
       alert("Không load được dữ liệu POI ban đầu (paris_core.json). Hãy kiểm tra lại file và đường dẫn.");
@@ -1517,14 +1638,17 @@ function getUiLangId() {
 
       pois = mergedList;
       isFullPoisLoaded = true;
-
       console.log("✅ Full POIs loaded & merged:", pois.length);
 
-      // Sau khi merge xong, cập nhật lại nearby
       if (map) {
-        updateNearbyList();
-        // Không fitToNearbyPois để tránh map nhảy khi user đang xem
+        if (deepLinkRef) {
+          deepLinkDone = false;      // ✅ allow reopening after merge
+          openPoiFromDeepLink();     // ✅ rebuild + open popup using full data
+        } else {
+          updateNearbyList();
+        }
       }
+
     } catch (err) {
       console.error("Lỗi load full POIs:", err);
       // Không alert để tránh làm phiền user
@@ -1568,8 +1692,16 @@ function getUiLangId() {
       langToggleBtn.textContent = currentLangConfig.flag || "🌐";
     }
 
-    markers.forEach(m => m._updatePopupContent());
+    markers.forEach(m => m._updatePopupContent && m._updatePopupContent());
+
     updateNearbyList();
+
+    // ✅ NEW: garder l'URL cohérente avec la langue (et conserver id si un POI est sélectionné)
+    updateUrlLangOnly();
+    if (highlightedPoiIdx !== null && pois[highlightedPoiIdx]?.reference) {
+      updateUrlWithPoi(pois[highlightedPoiIdx]);
+    }
+
   }
 
   function resetView() {
