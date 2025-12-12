@@ -682,6 +682,75 @@ main {
   let currentPriority = "topscore";
   let isProgrammaticMove = false;
 
+  // ===============================
+  // Deep-link: ?id=<poi.reference>
+  // ===============================
+  const params = new URLSearchParams(window.location.search);
+  const deepLinkRef = (params.get("id") || "").trim().toLowerCase();
+  let deepLinkDone = false;
+
+  function getCurrentLangIdForUrl() {
+    // On veut un id stable: "vi", "fr", "en", etc.
+    return (currentLangConfig?.id || "en").toLowerCase();
+  }
+
+  function updateUrlWithPoi(poi) {
+    if (!poi || !poi.reference) return;
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("id", poi.reference);              // ex: PA00086321
+    url.searchParams.set("lang", getCurrentLangIdForUrl()); // ex: vi
+    history.replaceState({}, "", url.toString());
+  }
+
+  function clearPoiFromUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("id");
+    // On garde lang (utile pour partager l’UI dans la bonne langue)
+    url.searchParams.set("lang", getCurrentLangIdForUrl());
+    history.replaceState({}, "", url.toString());
+  }
+
+
+  function findPoiIdxByRef(refLower) {
+    if (!refLower) return null;
+    for (let i = 0; i < pois.length; i++) {
+      const r = (pois[i]?.reference || "").toLowerCase();
+      if (r === refLower) return i;
+    }
+    return null;
+  }
+
+  function openPoiFromDeepLink() {
+    if (!deepLinkRef || deepLinkDone) return;
+    if (!map || !pois || !pois.length) return;
+
+    const idx = findPoiIdxByRef(deepLinkRef);
+    if (idx === null) return; // pas encore dans core/full
+
+    const poi = pois[idx];
+    if (!poi || !poi.lat || !poi.lon) return;
+
+    deepLinkDone = true;
+
+    // 1) Centrer la carte sur le POI (comme quand on clique: on veut voir ce POI)
+    //    On fait un jumpTo pour éviter les effets de bord, puis on calcule les nearby autour de ce centre.
+    isProgrammaticMove = true;
+    map.jumpTo({
+      center: [poi.lon, poi.lat],
+      zoom: Math.max(map.getZoom(), 16)
+    });
+
+    // 2) Recalculer nearby => crée les markers, dont celui du POI
+    updateNearbyList();
+
+    // 3) EXACTEMENT le même comportement qu’un clic sur marker :
+    //    - GA: onPoiClick(poi)
+    //    - detail + highlight/label violet via showPoiDetail()
+    onPoiClick(poi);
+    showPoiDetail(idx, { skipMove: true }); // skipMove car on vient déjà de centrer la map
+  }
+
   let isFullPoisLoaded = false;   // đã load xong bản full chưa?
   let poisByRef = {};             // dùng để merge nhanh theo reference
 
@@ -1170,6 +1239,7 @@ main {
     wrapper.addEventListener("click", (e) => {
       e.stopPropagation();
       onPoiClick(poi);          // log GA
+      updateUrlWithPoi(poi);    // ✅ NEW: met à jour l'URL pour partage
       showPoiDetail(poi._idx);  // sẽ gọi highlightMarkerForPoiIdx
     });
 
@@ -1310,8 +1380,13 @@ main {
     });
 
     map.on("load", () => {
+      if (deepLinkRef) {
+        // On laissera openPoiFromDeepLink() agir dès que les POIs sont chargés
+        return;
+      }
       resetView();
     });
+
 
     map.on("moveend", () => {
       // Nếu là di chuyển do code (flyTo, easeTo khi chọn POI, locate...)
@@ -1370,6 +1445,7 @@ main {
         highlightMarkerForPoiIdx(null);
         selectedPoiIdx = null;
         hidePoiDetail();
+        clearPoiFromUrl(); // ✅ NEW: retire id de l'URL (optionnel)
       }
     });
   }
@@ -1398,9 +1474,13 @@ main {
 
       console.log("Core POIs loaded:", pois.length);
 
+      openPoiFromDeepLink();
+
       if (map) {
         updateNearbyList();
-        fitToNearbyPois();
+        if (!deepLinkRef) {
+          fitToNearbyPois();
+        }
       }
 
       // 1.2. Load bản full ở background
@@ -1445,6 +1525,7 @@ main {
       }));
 
       pois = mergedList;
+      openPoiFromDeepLink();
       isFullPoisLoaded = true;
 
       console.log("✅ Full POIs loaded & merged:", pois.length);
@@ -1476,6 +1557,15 @@ main {
   }
 
   function applyLanguage() {
+    // ✅ garder lang dans l'URL; conserver aussi id si un POI est sélectionné
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", getCurrentLangIdForUrl());
+    if (selectedPoiIdx !== null && pois[selectedPoiIdx]?.reference) {
+      url.searchParams.set("id", pois[selectedPoiIdx].reference);
+    }
+    history.replaceState({}, "", url.toString());
+
+
     const uiLang = getUiLangId();
     const t = i18n[uiLang];
 
