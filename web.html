@@ -652,6 +652,8 @@
 
   let forcedPoiRefLower = null; // ✅ force include this POI in nearby selection
 
+  let mapLoaded = false;
+
   // ===============================
   // Deep-link + URL sync (WEB)
   // ===============================
@@ -693,50 +695,64 @@
     return null;
   }
 
-  // Ouvre le POI comme un clic (marker + liste + popup)
-  function openPoiFromDeepLink() {
+  function tryOpenDeepLink() {
     if (!deepLinkRef || deepLinkDone) return;
-    if (!map || !pois || !pois.length) return;
+    if (!map || !mapLoaded) return;
+    if (!pois || !pois.length) return;
 
-    // ✅ If map isn't fully loaded yet, retry once on load
-    if (typeof map.loaded === "function" && !map.loaded()) {
-      map.once("load", openPoiFromDeepLink);
+    const idx = findPoiIdxByRef(deepLinkRef);
+    if (idx === null) return; // not yet in current dataset (core/full)
+
+    const poi = pois[idx];
+    if (!poi || !poi.lat || !poi.lon) {
+      deepLinkDone = true;
       return;
     }
 
-    const idx = findPoiIdxByRef(deepLinkRef);
-    if (idx === null) return; // POI not in current dataset yet
-
-    const poi = pois[idx];
-    if (!poi || !poi.lat || !poi.lon) return;
-
     deepLinkDone = true;
 
-    // Center on POI first
+    // Ensure this POI exists in the "selected" list even if topscore excludes it
+    forcedPoiRefLower = deepLinkRef;
+
+    // Set selection state immediately (important for list highlight + scroll)
+    highlightedPoiIdx = poi._idx;
+
+    // Move map to POI
     isProgrammaticMove = true;
     map.jumpTo({
       center: [poi.lon, poi.lat],
       zoom: Math.max(map.getZoom(), 15)
     });
 
-    // Force this POI into selection, then build markers/list
-    forcedPoiRefLower = deepLinkRef;
+    // Rebuild markers + list around the new center
     updateNearbyList();
-    forcedPoiRefLower = null;
 
-    // Open popup explicitly (no fake click)
-    const marker = markers.find(m => m._poiIdx === poi._idx);
-    if (marker) {
+    // Open popup AFTER DOM/layout is ready (Firefox needs this)
+    requestAnimationFrame(() => {
+      const marker = markers.find(m => m._poiIdx === poi._idx);
+
+      highlightMarkerForPoiIdx(poi._idx);
+      highlightPoiListItem(poi._idx); // includes scrolling logic you added
+      updateUrlWithPoi(poi);
+
+      if (!marker) {
+        // One small retry in case updateNearbyList hasn't produced markers yet
+        setTimeout(() => {
+          const m2 = markers.find(m => m._poiIdx === poi._idx);
+          if (!m2) return;
+          closeAllPopups(poi._idx);
+          if (m2._updatePopupContent) m2._updatePopupContent();
+          const p2 = m2.getPopup();
+          if (p2) p2.setLngLat([poi.lon, poi.lat]).addTo(map);
+        }, 50);
+        return;
+      }
+
       closeAllPopups(poi._idx);
       if (marker._updatePopupContent) marker._updatePopupContent();
       const popup = marker.getPopup();
       if (popup) popup.setLngLat([poi.lon, poi.lat]).addTo(map);
-
-      highlightMarkerForPoiIdx(poi._idx);
-      highlightPoiListItem(poi._idx);
-    }
-
-    updateUrlWithPoi(poi);
+    });
   }
 
 
@@ -1230,6 +1246,8 @@ function getUiLangId() {
         li.classList.remove('active');
       }
     });
+      // ✅ ensure visible in the right sidebar scroll container
+    scrollPoiListToIdx(idx, "smooth");
   }
 
   function createMarker(poi) {
@@ -1519,8 +1537,10 @@ function getUiLangId() {
     });
 
     map.on("load", () => {
+      mapLoaded = true;
+
       if (deepLinkRef) {
-        // on laisse openPoiFromDeepLink() agir dès que les POIs sont chargés
+        tryOpenDeepLink();  // will open if POIs already loaded, otherwise it will be called again later
         return;
       }
       resetView();
@@ -1586,7 +1606,7 @@ function getUiLangId() {
 
     if (map) {
       if (deepLinkRef) {
-        openPoiFromDeepLink();     // ✅ this will build nearby + open popup
+        tryOpenDeepLink();     // ✅ this will build nearby + open popup
       } else {
         updateNearbyList();
         fitToNearbyPois();
@@ -1643,7 +1663,7 @@ function getUiLangId() {
       if (map) {
         if (deepLinkRef) {
           deepLinkDone = false;      // ✅ allow reopening after merge
-          openPoiFromDeepLink();     // ✅ rebuild + open popup using full data
+          tryOpenDeepLink();     // ✅ rebuild + open popup using full data
         } else {
           updateNearbyList();
         }
@@ -1702,6 +1722,33 @@ function getUiLangId() {
       updateUrlWithPoi(pois[highlightedPoiIdx]);
     }
 
+  }
+
+  function scrollPoiListToIdx(idx, behavior = "smooth") {
+    if (idx === null || idx === undefined) return;
+
+    const container = poiListEl; // <ul id="poi-list" ...> is the scroll container
+    const item = container.querySelector(`.poi-item[data-poi-idx="${idx}"]`);
+    if (!item) return;
+
+    const pad = 12; // small top/bottom margin
+    const itemTop = item.offsetTop;
+    const itemBottom = itemTop + item.offsetHeight;
+
+    const viewTop = container.scrollTop;
+    const viewBottom = viewTop + container.clientHeight;
+
+    // already fully visible
+    if (itemTop >= viewTop + pad && itemBottom <= viewBottom - pad) return;
+
+    let targetTop;
+    if (itemTop < viewTop) {
+      targetTop = Math.max(0, itemTop - pad);
+    } else {
+      targetTop = Math.max(0, itemBottom - container.clientHeight + pad);
+    }
+
+    container.scrollTo({ top: targetTop, behavior });
   }
 
   function resetView() {
