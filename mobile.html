@@ -681,6 +681,7 @@ main {
   let currentMaxPoints = 10;
   let currentPriority = "topscore";
   let isProgrammaticMove = false;
+  let isLocateMove = false;
 
   // ===============================
   // Deep-link: ?id=<poi.reference>
@@ -1391,10 +1392,34 @@ main {
     map.on("moveend", () => {
       // Nếu là di chuyển do code (flyTo, easeTo khi chọn POI, locate...)
       // thì chỉ reset cờ và không cập nhật nearby
-      if (isProgrammaticMove) {
-        isProgrammaticMove = false;
-        return;
+  if (isProgrammaticMove) {
+      isProgrammaticMove = false;
+
+      // ✅ If this programmatic move comes from "My location",
+      // recompute nearby POIs around the new center.
+      if (isLocateMove) {
+        isLocateMove = false;
+
+        const hadDetailBeforeMove = document.body.classList.contains('has-detail');
+        const activeIdxBeforeMove = selectedPoiIdx;
+
+        updateNearbyList();
+
+        // If detail was open, keep it only if POI still in nearby
+        if (hadDetailBeforeMove && activeIdxBeforeMove !== null) {
+          const stillInNearby = lastNearbyPois.some(p => p._idx === activeIdxBeforeMove);
+          if (stillInNearby) {
+            highlightMarkerForPoiIdx(activeIdxBeforeMove);
+            return;
+          }
+        }
+        if (document.body.classList.contains('has-detail')) {
+          hidePoiDetail();
+        }
       }
+
+      return;
+    }
 
       // ✅ NEW: ignore zoom-only changes (center practically unchanged)
       const newCenter = map.getCenter();
@@ -1645,6 +1670,7 @@ main {
     });
 
     locateBtn.addEventListener("click", () => {
+      isLocateMove = true;
       const uiLang = getUiLangId();
       const t = i18n[uiLang];
       if (!navigator.geolocation) {
